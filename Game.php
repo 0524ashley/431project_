@@ -2,9 +2,6 @@
 // =============================================================
 //  Game — represents one row from the Games table.
 //
-//  Static factory methods handle all DB interaction so
-//  the pages never write raw SQL themselves:
-//
 //    Game::getAll($db)              returns Game[]  ordered by date DESC
 //    Game::getById($db, $id)        returns Game|null
 //    Game::create($db, $data)       inserts a new row, returns new Game
@@ -22,8 +19,8 @@ class Game
   private $game_id      = 0;
   private $home_team_id = 0;
   private $away_team_id = 0;
-  private $home_team    = '';   // resolved team name (read-only from JOIN)
-  private $away_team    = '';   // resolved team name (read-only from JOIN)
+  private $home_team    = '';   
+  private $away_team    = '';
   private $home_score   = 0;
   private $away_score   = 0;
   private $game_date    = '';

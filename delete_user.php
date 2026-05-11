@@ -90,64 +90,7 @@
 <html>
   <head>
     <title>Delete Account - Baseball League</title>
-    <style>
-      #texta
-        {
-        overflow-y: auto;
-        }
-      .confirm-wrap
-        {
-        margin: 14px 10px;
-        }
-      .confirm-wrap h2
-        {
-        color: tan;
-        margin-top: 0;
-        }
-      .user-detail
-        {
-        border: 4px solid darkorange;
-        background: lightgreen;
-        color: black;
-        padding: 10px 14px;
-        margin: 10px 0;
-        line-height: 1.8em;
-        display: inline-block;
-        min-width: 300px;
-        }
-      .warning-text
-        {
-        color: red;
-        font-weight: bold;
-        margin: 10px 0;
-        }
-      .btn-confirm
-        {
-        padding: 5px 16px;
-        background: red;
-        color: white;
-        border: 2px solid darkred;
-        font-weight: bold;
-        cursor: pointer;
-        }
-      .btn-confirm:hover
-        {
-        background: darkred;
-        }
-      .back-link
-        {
-        display: inline-block;
-        margin-left: 12px;
-        color: black;
-        text-decoration: underline;
-        }
-      .msg-err
-        {
-        color: red;
-        font-weight: bold;
-        margin-bottom: 8px;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <h1 style = "text-align:center;">Baseball League Statistics</h1>

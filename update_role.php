@@ -182,61 +182,7 @@
 <html>
   <head>
     <title><?= $page_title ?> - Baseball League</title>
-    <style>
-      #texta
-        {
-        overflow-y: auto;
-        }
-      .form-wrap
-        {
-        margin: 14px 10px;
-        }
-      .form-wrap h2
-        {
-        color: tan;
-        margin-top: 0;
-        }
-      .form-wrap table td
-        {
-        padding: 5px 8px;
-        color: black;
-        }
-      .form-wrap select
-        {
-        padding: 3px 6px;
-        border: 1px solid black;
-        background: lightgreen;
-        min-width: 140px;
-        }
-      .current-val
-        {
-        color: black;
-        font-size: 0.92em;
-        margin-bottom: 10px;
-        }
-      .btn-save
-        {
-        padding: 5px 16px;
-        background: lightgreen;
-        color: black;
-        border: 2px solid darkorange;
-        font-weight: bold;
-        cursor: pointer;
-        }
-      .btn-save:hover
-        {
-        background: darkorange;
-        }
-      .back-link
-        {
-        display: inline-block;
-        margin-top: 10px;
-        color: black;
-        text-decoration: underline;
-        }
-      .msg-ok  { color: green; margin-bottom: 8px; font-weight: bold; }
-      .msg-err { color: red;   margin-bottom: 8px; font-weight: bold; }
-    </style>
+    <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <h1 style = "text-align:center;">Baseball League Statistics</h1>

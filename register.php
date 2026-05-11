@@ -157,17 +157,7 @@
 <html>
   <head>
     <title>Register - Baseball League</title>
-    <style>
-      #regbox
-        {
-        overflow-y: auto;
-        }
-      #regbox td:first-child
-        {
-        text-align: right;
-        padding-right: 8px;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <h1 style = "text-align:center">Welcome to the Baseball League:</h1>

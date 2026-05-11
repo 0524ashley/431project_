@@ -121,53 +121,11 @@
 <html>
   <head>
     <title>Baseball League - Team Statistics</title>
+    <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <h1 style = "text-align: center;">Baseball League Statistics</h1>
     <?php Format("texta", 10, 8, 150, "black", 2, "black", "gray", 83, 89.6); ?>
-    <style>
-      #texta
-        {
-        overflow-y: auto;
-        }
-      .team-block
-        {
-        margin-bottom: 30px;
-        }
-      .team-title
-        {
-        color: tan;
-        font-size: 1.4em;
-        margin: 10px 0 2px 0;
-        }
-      .coach-line
-        {
-        color: lightyellow;
-        font-size: 0.95em;
-        margin-bottom: 6px;
-        }
-      table
-        {
-        border-collapse: collapse;
-        width: 100%;
-        }
-      th
-        {
-        vertical-align: top;
-        border: 4px solid darkorange;
-        background: lightgreen;
-        color: black;
-        padding: 4px 8px;
-        }
-      td
-        {
-        vertical-align: top;
-        border: 4px solid darkorange;
-        background: lightgreen;
-        color: black;
-        padding: 4px 8px;
-        }
-    </style>
 
     <div id = "texta">
       <h2 style = "text-align: center; color: tan;">Teams &amp; Player Statistics</h2>

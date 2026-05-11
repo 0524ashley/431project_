@@ -107,69 +107,7 @@
 <html>
   <head>
     <title>Create Game - Baseball League</title>
-    <style>
-      #texta
-        {
-        overflow-y: auto;
-        }
-      .form-wrap
-        {
-        margin: 14px 10px;
-        }
-      .form-wrap h2
-        {
-        color: tan;
-        margin-top: 0;
-        }
-      table
-        {
-        border-collapse: collapse;
-        background: blue;
-        }
-      th, td
-        {
-        vertical-align: top;
-        border: 4px solid darkorange;
-        background: lightgreen;
-        color: black;
-        padding: 5px 10px;
-        }
-      input[type=text], input[type=date], input[type=number], select
-        {
-        padding: 3px 6px;
-        border: 1px solid black;
-        background: lightgreen;
-        color: black;
-        min-width: 160px;
-        }
-      .btn-save
-        {
-        margin-top: 10px;
-        padding: 5px 16px;
-        background: lightgreen;
-        color: black;
-        border: 2px solid darkorange;
-        font-weight: bold;
-        cursor: pointer;
-        }
-      .btn-save:hover
-        {
-        background: darkorange;
-        }
-      .back-link
-        {
-        display: inline-block;
-        margin-top: 10px;
-        color: black;
-        text-decoration: underline;
-        }
-      .msg-err
-        {
-        color: red;
-        font-weight: bold;
-        margin-bottom: 8px;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <h1 style = "text-align:center;">Baseball League Statistics</h1>

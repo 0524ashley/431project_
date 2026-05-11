@@ -83,42 +83,6 @@
       : '';
 
     echo "
-      <style>
-        #textb a
-          {
-          color: purple;
-          text-decoration: none;
-          display: block;
-          margin: 5px 0;
-          }
-        #textb a:hover
-          {
-          text-decoration: underline;
-          }
-        #textb .menu-label
-          {
-          color: black;
-          font-weight: bold;
-          margin-top: 8px;
-          margin-bottom: 2px;
-          }
-        #textb .user-info
-          {
-          font-size: 0.95em;
-          margin-bottom: 6px;
-          line-height: 1.5em;
-          }
-        #textb .role-badge
-          {
-          display: inline-block;
-          font-size: 0.8em;
-          background: #ddd;
-          color: #333;
-          border-radius: 3px;
-          padding: 1px 5px;
-          }
-      </style>
-
       <div id='textb'>
         <div class='user-info'>
           <strong>Name:</strong> 
