@@ -21,7 +21,6 @@
 
   // ------------------------------------------------------------------
   // Fetch the logged-in user's display name and team name for the menu.
-  // Uses $_SESSION['email'] set at login.
   // ------------------------------------------------------------------
   $menu_display_name = $_SESSION['username'] ?? 'User';
   $menu_team_name    = '';
@@ -47,7 +46,8 @@
 
   // ------------------------------------------------------------------
   // Main query — all teams 2/3/4, coaches (role 2) and players (role 1).
-  // ORDER BY role DESC so coaches appear first when we fill $teams[].
+  // Reads career totals from Player_statistics (Total_ prefixed columns).
+  // ORDER BY role DESC so coaches appear first.
   // ------------------------------------------------------------------
   $teams = [];
 
@@ -57,23 +57,21 @@
             UA.Role_type,
             UI.First_name,
             UI.Last_name,
-            US.Goals,
-            US.Assists,
-            US.Home_runs,
-            US.Time_on_field_mins,
-            US.Time_on_field_secs
-    FROM    Users_info         AS UI
-    JOIN    Users_accounts     AS UA ON UA.User_email  = UI.Email
-    JOIN    Teams              AS T  ON T.ID           = UI.Team_num
-    LEFT JOIN Users_statistics AS US ON US.Player_ID   = UI.ID_num
+            PS.Total_goals,
+            PS.Total_assists,
+            PS.Total_home_runs,
+            PS.Total_time_on_field_mins,
+            PS.Total_time_on_field_secs
+    FROM    Users_info           AS UI
+    JOIN    Users_accounts       AS UA ON UA.User_email = UI.Email
+    JOIN    Teams                AS T  ON T.ID          = UI.Team_num
+    LEFT JOIN Player_statistics  AS PS ON PS.Player_ID  = UI.ID_num
     WHERE   UI.Team_num   IN (2, 3, 4)
       AND   UA.Role_type  IN (1, 2)
     ORDER BY T.ID ASC, UA.Role_type DESC, UI.Last_name ASC, UI.First_name ASC
   ");
   if (!$stmt)
-    {
     die("Prepare failed: " . $db->error);
-    }
 
   $stmt->execute();
   $stmt->bind_result(
@@ -98,9 +96,7 @@
     if ($role_type == 2) // coach
       {
       if ($teams[$team_id]['coach'] === null)
-        {
         $teams[$team_id]['coach'] = htmlspecialchars($first_name . ' ' . $last_name);
-        }
       }
     else // player
       {
@@ -153,10 +149,10 @@
               <table style = "background: blue;">
                 <tr>
                   <th>Player</th>
-                  <th>Goals</th>
-                  <th>Assists</th>
-                  <th>Home Runs</th>
-                  <th>Time on Field</th>
+                  <th>Total Goals</th>
+                  <th>Total Assists</th>
+                  <th>Total Home Runs</th>
+                  <th>Total Time on Field</th>
                 </tr>
                 <?php foreach ($team['players'] as $p): ?>
                   <tr>
@@ -178,17 +174,11 @@
     <?php
       $button = $_POST['button'] ?? '';
       if ($button == "Open Menu")
-        {
         MenuOpen(1, $menu_display_name, $menu_team_name, $_SESSION['role'] ?? '');
-        }
       elseif ($button == "Close Menu")
-        {
         MenuOpen(0, $menu_display_name, $menu_team_name, $_SESSION['role'] ?? '');
-        }
       else
-        {
         MenuOpen(0, $menu_display_name, $menu_team_name, $_SESSION['role'] ?? '');
-        }
     ?>
   </body>
 </html>

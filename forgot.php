@@ -22,19 +22,19 @@
       }
     else
       {
-      //   Connect as Visitor to look up whether the submitted email belongs
-      // to an existing account in Players_accounts. No data is modified at
-      // this stage, so read-only Visitor credentials are appropriate.
-      $db    = new mysqli('localhost', 'Visitor', 'Login', 'Baseball');
+      //   Connect as Observer to look up whether the submitted email belongs
+      // to an existing account in Users_accounts. No data is modified at
+      // this stage, so read-only Observer credentials are appropriate.
+      $db    = new mysqli('localhost', 'Observer', 'ObserverSecret', 'Baseball');
       $found = false;
 
       if (!$db->connect_errno)
         {
         $stmt = $db->prepare(
-          "SELECT PA.User_email
-           FROM Players_accounts PA
-           JOIN Players_info PI ON PA.User_email = PI.Email
-           WHERE PI.Email = ?"
+          "SELECT UA.User_email
+           FROM Users_accounts UA
+           JOIN Users_info UI ON UA.User_email = UI.Email
+           WHERE UI.Email = ?"
         );
         $stmt->bind_param("s", $email);
         $stmt->execute();
@@ -51,13 +51,13 @@
       else
         {
         //   Generate a random 16-character temporary password and hash it
-        // with bcrypt. The Player account is used for the UPDATE since it
-        // holds the required write privileges on Players_accounts. The
+        // with bcrypt. The User account is used for the UPDATE since it
+        // holds the required write privileges on Users_accounts. The
         // plaintext temporary password is then emailed to the user.
         $new_pass = bin2hex(random_bytes(8));
         $hash     = password_hash($new_pass, PASSWORD_DEFAULT);
 
-        $db = new mysqli('localhost', 'Player', 'HashSecret1', 'Baseball');
+        $db = new mysqli('localhost', 'User', 'UserSecret', 'Baseball');
         if ($db->connect_errno)
           {
           $error = "Database error. Please try again.";
@@ -65,7 +65,7 @@
         else
           {
           $stmt = $db->prepare(
-            "UPDATE Players_accounts SET Password = ? WHERE User_email = ?"
+            "UPDATE Users_accounts SET Password = ? WHERE User_email = ?"
           );
           $stmt->bind_param("ss", $hash, $email);
           $stmt->execute();

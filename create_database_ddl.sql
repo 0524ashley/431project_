@@ -26,7 +26,8 @@ INSERT INTO Teams (ID, Name) VALUES
 -- -------------------------------------------------------------
 --  Users_info
 --  Email is the natural PK and FK target for Users_accounts.
---  ID_num is the surrogate PK and FK target for Users_statistics.
+--  ID_num is the surrogate PK and FK target for Player_statistics
+--  and Games_statistics.
 --  Team_num is set at registration (user picks their team).
 --  Defaults to 1 (N/A) so the column is never null.
 --  A manager can reassign Team_num later.
@@ -65,30 +66,33 @@ INSERT INTO Users_info (ID_num, Email, Team_num, First_name, Last_name) VALUES
 
 
 -- -------------------------------------------------------------
---  Users_statistics
---  Player_ID is a FK to Users_info.ID_num (the surrogate key).
---  One stats row per player, inserted at registration.
+--  Player_statistics
+--  Stores career totals for each player (aggregated across all
+--  games). Player_ID is a FK to Users_info.ID_num.
+--  One row per player, inserted at registration.
+--  Column names use the Total_ prefix to distinguish them from
+--  the per-game columns in Games_statistics.
 --  "user" role can update stats for players on their own team
---  only — this is enforced at the application layer via a
---  Team_num check before any UPDATE is issued.
+--  only — enforced at the application layer via a Team_num check.
 -- -------------------------------------------------------------
-CREATE TABLE Users_statistics (
-    Player_ID          INT(3) UNSIGNED NOT NULL,
-    Time_on_field_mins INT(3) UNSIGNED NOT NULL DEFAULT 0,
-    Time_on_field_secs INT(3) UNSIGNED NOT NULL DEFAULT 0,
-    Goals              INT(3) UNSIGNED NOT NULL DEFAULT 0,
-    Assists            INT(3) UNSIGNED NOT NULL DEFAULT 0,
-    Home_runs          INT(3) UNSIGNED NOT NULL DEFAULT 0,
+CREATE TABLE Player_statistics (
+    Player_ID                INT(3) UNSIGNED NOT NULL,
+    Total_time_on_field_mins INT(3) UNSIGNED NOT NULL DEFAULT 0,
+    Total_time_on_field_secs INT(3) UNSIGNED NOT NULL DEFAULT 0,
+    Total_goals              INT(3) UNSIGNED NOT NULL DEFAULT 0,
+    Total_assists            INT(3) UNSIGNED NOT NULL DEFAULT 0,
+    Total_home_runs          INT(3) UNSIGNED NOT NULL DEFAULT 0,
     PRIMARY KEY (Player_ID),
     FOREIGN KEY (Player_ID) REFERENCES Users_info(ID_num) ON DELETE CASCADE
 );
 
-INSERT INTO Users_statistics (Player_ID, 
-    Time_on_field_mins,
-    Time_on_field_secs,
-    Goals,
-    Assists,
-    Home_runs) VALUES
+INSERT INTO Player_statistics (
+    Player_ID,
+    Total_time_on_field_mins,
+    Total_time_on_field_secs,
+    Total_goals,
+    Total_assists,
+    Total_home_runs) VALUES
     (100, 45, 30, 3, 2, 5),
     (101, 38, 20, 2, 4, 3),
     (102, 50, 10, 4, 1, 6),
@@ -98,18 +102,14 @@ INSERT INTO Users_statistics (Player_ID,
     (112, 39, 25, 2, 2, 3),
     (113, 44, 50, 4, 2, 5),
     (114, 41, 35, 3, 4, 4);
-INSERT INTO Users_statistics (Player_ID) VALUES
+INSERT INTO Player_statistics (Player_ID) VALUES
     (115),
     (116),
     (110);
 
+
 -- -------------------------------------------------------------
 --  Roles
---  Three application roles only. Role-to-DB-credential mapping
---  lives in PHP — no passwords stored here.
---    1 = observer  ->  read-only + own password change
---    2 = user      ->  read + update own team's statistics
---    3 = manager   ->  full access (no schema changes)
 -- -------------------------------------------------------------
 CREATE TABLE Roles (
     ID        INT(3) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -124,13 +124,7 @@ INSERT INTO Roles (ID, Role_name) VALUES
 
 -- -------------------------------------------------------------
 --  Users_accounts
---  User_email is PK and FK back to Users_info.
---  Password stores bcrypt hash — VARCHAR(255) is required
---  since bcrypt output is 60 chars and future algorithms may
---  be longer. Do NOT use VARCHAR(100) — it will truncate hashes.
---  Password uniqueness is NOT enforced at the DB level; bcrypt
---  random salts already guarantee unique hashes in practice,
---  and a UNIQUE constraint here would cause false failures.
+--  Password stores bcrypt hash — VARCHAR(255) required.
 -- -------------------------------------------------------------
 CREATE TABLE Users_accounts (
     User_email VARCHAR(50)  NOT NULL,
@@ -142,29 +136,18 @@ CREATE TABLE Users_accounts (
     FOREIGN KEY (Role_type)  REFERENCES Roles(ID)
 );
 
--- NOTE: Replace the placeholder hashes below before deploying.
--- Generate real hashes with: php -r "echo password_hash('TempPass1!', PASSWORD_DEFAULT);"
-
--- bobross      = observer, Angels  (team 2)  pwd: Password123!
--- other player = pwd: Player123!
--- maimai       = user,     Dodgers (team 3)  pwd: Baseball2024
--- joesmith     = manager,  N/A     (team 1)  pwd: TeamManager#1
-
 INSERT INTO Users_accounts (User_email, Role_type, Username, Password) VALUES
     ('coach.maimai@gmail.com', 2, 'maimai', '$2y$10$u8Qn8yX5d7Tg3Lk9hP2rQeZ7sY4xF9aJ1Kz6LmN0pQrStUvWxYz12'),
     ('joesmith@gmail.com',    3, 'joesmith',    '$2y$10$75fR8ojKgHHt4FxhsNAFCO15sgUDs4TLv6IsCt800VnKnB9P8ZaVy'),
 
-    -- Angels players / observers
     ('bobross@gmail.com',        1, 'bobross',       '$2y$08$YssQagi6/7COYT.S1zL43OyEBNXD/Ahp2C8hs/Km50OOfgHEHx/xe'),
     ('sarah.johnson@gmail.com',  1, 'sarahjohnson',  '$2y$08$5Qlb4khzI6MbA7IcGryY.O/mmPdHANbjRDq5GeY.K2zHBFyOU6eea'),
     ('mike.davis@gmail.com',     1, 'mikedavis',     '$2y$08$vwlGgbp06vDOpugVJLPmAeUuAbn.7XZIXrHATXOIy.Y5NxEJOQAAS'),
 
-    -- Dodgers players / observers, except robertsmith is existing coach/user
     ('robertsmith@gmail.com',    1, 'robertsmith',   '$2y$08$JvMdUBd7f9je1AfcD2PCRuTuUTRaYa4yeALwWXjpACG0D9gr0bPoS'),
     ('jessica.lee@gmail.com',    1, 'jessicalee',    '$2y$08$ashLoZCL5Qh80LdIrViwROzsdAMK.lLh2agX3ICMg.qPrc95Fa5za'),
     ('david.brown@gmail.com',    1, 'davidbrown',    '$2y$08$caw/kaoSTALtfV3eLZSfMO6yPcPcpdHj1WeYXiP8cDfo2V1YiAqoO'),
 
-    -- Giants players / observers; Team 4 has no coach yet
     ('emily.wilson@gmail.com',   1, 'emilywilson',   '$2y$08$/OGxsPUEJXZrAfZROh9fcepKr.VwnGy9F1NskGzEQ7gkK4C/Vs6Yq'),
     ('james.martinez@gmail.com', 1, 'jamesmartinez', '$2y$08$40TVlOq9d52KKsMSJcIje.7WlvO56wz3VK741TaqTrt/XIE4Z37di'),
     ('lisa.garcia@gmail.com',    1, 'lisagarcia',    '$2y$08$Sr3UCslG3ZcxslQlvgyNTO2oHqHgYl7rn5SocLu6vVe1fvG/xRwFq'),
@@ -174,9 +157,6 @@ INSERT INTO Users_accounts (User_email, Role_type, Username, Password) VALUES
 
 -- -------------------------------------------------------------
 --  Games
---  Both Home_Team_ID and Away_Team_ID reference Teams.ID.
---  Constraints are named explicitly to avoid MySQL errors when
---  two FKs point to the same parent table.
 -- -------------------------------------------------------------
 CREATE TABLE Games (
     Game_ID      INT(5) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -205,11 +185,49 @@ INSERT INTO Games (Home_Team_ID, Away_Team_ID, Game_date, Location, Home_score, 
     (4, 2, '2025-06-26', 'Oracle Park, San Francisco CA',  6, 4);
 
 
+-- -------------------------------------------------------------
+--  Games_statistics
+--  Per-game, per-player stats. Composite PK: (Game_ID, Player_ID).
+--  ON DELETE CASCADE on both FKs: deleting a game automatically
+--  removes all its stat rows; deleting a player does the same.
+-- -------------------------------------------------------------
+CREATE TABLE Games_statistics (
+    Game_ID            INT(5) UNSIGNED NOT NULL,
+    Player_ID          INT(3) UNSIGNED NOT NULL,
+    Time_on_field_mins INT(3) UNSIGNED NOT NULL DEFAULT 0,
+    Time_on_field_secs INT(3) UNSIGNED NOT NULL DEFAULT 0,
+    Goals              INT(3) UNSIGNED NOT NULL DEFAULT 0,
+    Assists            INT(3) UNSIGNED NOT NULL DEFAULT 0,
+    Home_runs          INT(3) UNSIGNED NOT NULL DEFAULT 0,
+    PRIMARY KEY (Game_ID, Player_ID),
+    CONSTRAINT fk_gs_game   FOREIGN KEY (Game_ID)   REFERENCES Games(Game_ID)     ON DELETE CASCADE,
+    CONSTRAINT fk_gs_player FOREIGN KEY (Player_ID) REFERENCES Users_info(ID_num) ON DELETE CASCADE
+);
+
+-- Sample per-game stats for Games 1 and 2
+INSERT INTO Games_statistics
+    (Game_ID, Player_ID, Time_on_field_mins, Time_on_field_secs, Goals, Assists, Home_runs) VALUES
+    -- Game 1: Angels (home) vs Dodgers (away), 2025-04-10
+    (1, 100,  9,  5, 1, 0, 2),
+    (1, 101,  7, 30, 0, 1, 1),
+    (1, 102,  8, 55, 1, 0, 2),
+    (1, 108,  8, 10, 2, 1, 1),
+    (1, 109,  6, 20, 0, 1, 0),
+    (1, 111,  7,  0, 1, 1, 2),
+    -- Game 2: Dodgers (home) vs Angels (away), 2025-04-17
+    (2, 100,  8, 15, 0, 1, 1),
+    (2, 101,  9,  0, 1, 2, 1),
+    (2, 102,  7, 45, 1, 0, 2),
+    (2, 108, 10,  0, 2, 1, 3),
+    (2, 109,  8, 20, 0, 2, 1),
+    (2, 111,  9, 30, 1, 0, 1);
+
+
 -- =============================================================
 --  MySQL Database Users and Privileges
 --
 --  Auth flow summary:
---    1. PHP always connects as DB_identity first (login only)
+--    1. PHP connects as DB_identity first (login only)
 --    2. DB_identity returns the bcrypt hash + role name
 --    3. PHP runs password_verify() — plaintext never hits DB
 --    4. On success, PHP opens a second connection using the
@@ -220,91 +238,73 @@ INSERT INTO Games (Home_Team_ID, Away_Team_ID, Game_date, Location, Home_score, 
 
 
 -- -------------------------------------------------------------
---  DB_identity
---  The ONLY hardcoded credential in the PHP application.
---  Used solely during login to fetch the hash and role.
---  Has no write access anywhere.
+--  DB_identity — read-only, login use only
 -- -------------------------------------------------------------
 DROP USER IF EXISTS 'DB_identity'@'localhost';
 CREATE USER 'DB_identity'@'localhost' IDENTIFIED BY 'IdentitySecret';
 GRANT SELECT (User_email, Username, Password, Role_type) ON Baseball.Users_accounts TO 'DB_identity'@'localhost';
-GRANT SELECT (ID, Role_name)                 ON Baseball.Roles           TO 'DB_identity'@'localhost';
+GRANT SELECT (ID, Role_name)                             ON Baseball.Roles           TO 'DB_identity'@'localhost';
 GRANT SELECT (Email, Team_num)                           ON Baseball.Users_info      TO 'DB_identity'@'localhost';
 
 -- -------------------------------------------------------------
---  App_register
---  Used by register.php only (unauthenticated users).
---  Needs SELECT to check duplicate email/username and to
---  populate the team dropdown. Needs INSERT to create new rows.
---  No UPDATE or DELETE — a visitor cannot modify existing data.
+--  App_register — used by register.php only
 -- -------------------------------------------------------------
 DROP USER IF EXISTS 'App_register'@'localhost';
 CREATE USER 'App_register'@'localhost' IDENTIFIED BY 'RegisterSecret';
-GRANT SELECT          ON Baseball.Teams          TO 'App_register'@'localhost';
-GRANT SELECT          ON Baseball.Roles          TO 'App_register'@'localhost';
-GRANT SELECT, INSERT  ON Baseball.Users_info     TO 'App_register'@'localhost';
-GRANT SELECT, INSERT  ON Baseball.Users_accounts TO 'App_register'@'localhost';
+GRANT SELECT         ON Baseball.Teams              TO 'App_register'@'localhost';
+GRANT SELECT         ON Baseball.Roles              TO 'App_register'@'localhost';
+GRANT SELECT, INSERT ON Baseball.Users_info         TO 'App_register'@'localhost';
+GRANT SELECT, INSERT ON Baseball.Users_accounts     TO 'App_register'@'localhost';
+GRANT INSERT         ON Baseball.Player_statistics  TO 'App_register'@'localhost';
 
 
 -- -------------------------------------------------------------
---  Observer  (Role_type = 1)
---  Read-only across all tables.
---  Can UPDATE only the Password column on Users_accounts.
---  PHP enforces "own row only" by filtering:
---    WHERE User_email = $_SESSION['email']
---  before issuing any UPDATE — the DB grants column access,
---  the application enforces the row-level restriction.
+--  Observer  (Role_type = 1) — read-only + own password change
 -- -------------------------------------------------------------
 DROP USER IF EXISTS 'Observer'@'localhost';
 CREATE USER 'Observer'@'localhost' IDENTIFIED BY 'ObserverSecret';
-GRANT SELECT ON Baseball.Teams            TO 'Observer'@'localhost';
-GRANT SELECT ON Baseball.Users_info       TO 'Observer'@'localhost';
-GRANT SELECT ON Baseball.Users_statistics TO 'Observer'@'localhost';
-GRANT SELECT ON Baseball.Games            TO 'Observer'@'localhost';
-GRANT SELECT ON Baseball.Roles            TO 'Observer'@'localhost';
-GRANT SELECT ON Baseball.Users_accounts   TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Teams              TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Users_info         TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Player_statistics  TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Games_statistics   TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Games              TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Roles              TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Users_accounts     TO 'Observer'@'localhost';
 GRANT UPDATE (Password) ON Baseball.Users_accounts TO 'Observer'@'localhost';
 
 
 -- -------------------------------------------------------------
 --  User  (Role_type = 2)
---  Same read access as Observer.
---  Can UPDATE and INSERT statistics rows — but only for players
---  on their own team. PHP enforces this by:
---    1. Storing $_SESSION['team_num'] at login (fetched via JOIN
---       Users_accounts -> Users_info at the time of auth)
---    2. Before any stats write, confirming the target player's
---       Team_num matches $_SESSION['team_num']
---  The DB grants the column access; row-level restriction is
---  in the application query logic.
---  Can also change their own password (same pattern as Observer).
+--  Can update Player_statistics totals and manage
+--  Games_statistics rows — but only for their own team.
+--  Row-level restriction enforced in the application layer.
 -- -------------------------------------------------------------
 DROP USER IF EXISTS 'User'@'localhost';
 CREATE USER 'User'@'localhost' IDENTIFIED BY 'UserSecret';
-GRANT SELECT ON Baseball.Teams            TO 'User'@'localhost';
-GRANT SELECT ON Baseball.Users_info       TO 'User'@'localhost';
-GRANT SELECT ON Baseball.Users_statistics TO 'User'@'localhost';
-GRANT SELECT ON Baseball.Games            TO 'User'@'localhost';
-GRANT SELECT ON Baseball.Roles            TO 'User'@'localhost';
-GRANT SELECT ON Baseball.Users_accounts   TO 'User'@'localhost';
-GRANT UPDATE, INSERT ON Baseball.Users_statistics TO 'User'@'localhost';
-GRANT UPDATE (Password) ON Baseball.Users_accounts TO 'User'@'localhost';
+GRANT SELECT ON Baseball.Teams              TO 'User'@'localhost';
+GRANT SELECT ON Baseball.Users_info         TO 'User'@'localhost';
+GRANT SELECT ON Baseball.Player_statistics  TO 'User'@'localhost';
+GRANT SELECT ON Baseball.Games_statistics   TO 'User'@'localhost';
+GRANT SELECT ON Baseball.Games              TO 'User'@'localhost';
+GRANT SELECT ON Baseball.Roles              TO 'User'@'localhost';
+GRANT SELECT ON Baseball.Users_accounts     TO 'User'@'localhost';
+GRANT UPDATE         ON Baseball.Player_statistics  TO 'User'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Games_statistics TO 'User'@'localhost';
+GRANT UPDATE (Password) ON Baseball.Users_accounts  TO 'User'@'localhost';
 
 
 -- -------------------------------------------------------------
---  Manager  (Role_type = 3)
---  Full INSERT / UPDATE / DELETE on all tables.
---  Can reset any user's password, reassign teams, change roles.
---  Cannot ALTER or DROP tables — no DDL privileges granted.
+--  Manager  (Role_type = 3) — full access, no DDL
 -- -------------------------------------------------------------
 DROP USER IF EXISTS 'Manager'@'localhost';
 CREATE USER 'Manager'@'localhost' IDENTIFIED BY 'ManagerSecret';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Teams            TO 'Manager'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Users_info       TO 'Manager'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Users_statistics TO 'Manager'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Games            TO 'Manager'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Roles            TO 'Manager'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Users_accounts   TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Teams              TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Users_info         TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Player_statistics  TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Games_statistics   TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Games              TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Roles              TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Users_accounts     TO 'Manager'@'localhost';
 
 
 FLUSH PRIVILEGES;

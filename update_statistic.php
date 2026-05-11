@@ -1,4 +1,16 @@
 <?php
+// =============================================================
+//  update_statistic.php
+//
+//  Shows a player's career totals (read-only, auto-computed
+//  from Games_statistics) and lists their per-game entries
+//  with links to add, edit, or delete individual game rows.
+//
+//  The Career Totals section is intentionally NOT editable here.
+//  They are always recomputed automatically whenever a game-stat
+//  row is saved or deleted via processStatisticUpdate/Delete.php.
+// =============================================================
+
   if (session_status() === PHP_SESSION_NONE)
     {
     session_start();
@@ -6,9 +18,12 @@
   require_once('functions.php');
   require_once('User.php');
   require_once('PlayerStatistic.php');
+  require_once('GameStatistic.php');
+  require_once('Game.php');
   UserCheck(0);
 
-  if (($_SESSION['role'] ?? '') !== 'manager')
+  $role = $_SESSION['role'] ?? '';
+  if ($role !== 'manager' && $role !== 'user')
     {
     header("Location: home_page.php");
     exit;
@@ -34,11 +49,8 @@
     exit;
     }
 
-  $error   = '';
-  $success = '';
-
   // ------------------------------------------------------------------
-  // Fetch logged-in manager's display info for the menu
+  // Fetch logged-in user's display info for the menu
   // ------------------------------------------------------------------
   $menu_display_name = $_SESSION['username'] ?? 'User';
   $menu_team_name    = '';
@@ -51,8 +63,7 @@
     }
 
   // ------------------------------------------------------------------
-  // Load target player identity (name, team) via User class
-  // Load target player stats via PlayerStatistic class
+  // Load target player, career totals, and per-game stats
   // ------------------------------------------------------------------
   $player = User::getById($db, $player_id);
 
@@ -60,6 +71,14 @@
     {
     $db->close();
     header("Location: role_management_page.php");
+    exit;
+    }
+
+  // Coaches may only view/edit stats for their own team
+  if ($role === 'user' && $player->teamId() !== (int)($_SESSION['team_id'] ?? 0))
+    {
+    $db->close();
+    header("Location: home_page.php");
     exit;
     }
 
@@ -72,36 +91,26 @@
     exit;
     }
 
-  // ------------------------------------------------------------------
-  // Handle POST — update via PlayerStatistic class
-  // ------------------------------------------------------------------
-  if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_stats']))
-    {
-    $data = [
-      'goals'     => (int)($_POST['goals']    ?? 0),
-      'assists'   => (int)($_POST['assists']  ?? 0),
-      'home_runs' => (int)($_POST['homeruns'] ?? 0),
-      'time_mins' => (int)($_POST['mins']     ?? 0),
-      'time_secs' => (int)($_POST['secs']     ?? 0),
-    ];
+  // Per-game rows for this player
+  $game_stats = GameStatistic::getByPlayer($db, $player_id);
 
-    if (PlayerStatistic::update($db, $player_id, $data))
-      {
-      $success = "Stats updated for " . htmlspecialchars($player->fullName()) . ".";
-      $stat    = PlayerStatistic::getById($db, $player_id); // reload fresh values
-      }
-    else
-      {
-      $error = "Update failed. Please try again.";
-      }
-    }
+  // All games for the "Add / Edit" dropdown
+  $all_games = Game::getAll($db);
 
   $db->close();
+
+  // ------------------------------------------------------------------
+  // Flash messages from process scripts
+  // ------------------------------------------------------------------
+  $flash = '';
+  if (isset($_GET['gs_saved']))    $flash = 'Game stat saved and career totals updated.';
+  if (isset($_GET['gs_deleted']))  $flash = 'Game stat deleted and career totals updated.';
+  if (isset($_GET['gs_error']))    $flash = 'An error occurred. Please try again.';
 ?>
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Change Stats - Baseball League</title>
+    <title>Player Stats - Baseball League</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -110,60 +119,136 @@
 
     <div id = "texta">
       <div class = "form-wrap">
-        <h2>Change Stats: <?= htmlspecialchars($player->fullName()) ?></h2>
+        <h2>Player Stats: <?= htmlspecialchars($player->fullName()) ?></h2>
 
-        <?php if ($success): ?>
-          <p class = "msg-ok"><?= $success ?></p>
-        <?php endif; ?>
-        <?php if ($error): ?>
-          <p class = "msg-err"><?= htmlspecialchars($error) ?></p>
+        <?php if ($flash): ?>
+          <?php if (isset($_GET['gs_error'])): ?>
+            <p class = "msg-err"><?= htmlspecialchars($flash) ?></p>
+          <?php else: ?>
+            <p class = "msg-ok"><?= htmlspecialchars($flash) ?></p>
+          <?php endif; ?>
         <?php endif; ?>
 
-        <form method = "post" action = "update_statistic.php?id=<?= $player_id ?>">
-          <table style = "border-collapse:collapse; background:blue;">
+        <!-- ======================================================
+             Section 1: Career Totals — READ ONLY
+             These values are always recomputed automatically from
+             Games_statistics. They cannot be edited directly.
+             ====================================================== -->
+        <h3 style = "color:tan; margin-top:16px;">Career Totals
+          <span style = "font-size:0.75em; font-weight:normal; color:lightgray;">
+            (auto-updated from game entries)
+          </span>
+        </h3>
+
+        <table style = "border-collapse:collapse; background:blue;">
+          <tr>
+            <th style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Stat</th>
+            <th style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Total</th>
+          </tr>
+          <tr>
+            <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Goals</td>
+            <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
+              <?= $stat->goals() ?>
+            </td>
+          </tr>
+          <tr>
+            <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Assists</td>
+            <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
+              <?= $stat->assists() ?>
+            </td>
+          </tr>
+          <tr>
+            <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Home Runs</td>
+            <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
+              <?= $stat->home_runs() ?>
+            </td>
+          </tr>
+          <tr>
+            <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Time on Field</td>
+            <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
+              <?= htmlspecialchars($stat->time_on_field()) ?>
+            </td>
+          </tr>
+        </table>
+
+        <!-- ======================================================
+             Section 2: Per-Game Stats (Games_statistics)
+             ====================================================== -->
+        <h3 style = "color:tan; margin-top:24px;">Per-Game Stats</h3>
+
+        <!-- Dropdown to add/edit a game-stat row -->
+        <?php if (!empty($all_games)): ?>
+          <div style = "margin-bottom:12px;">
+            <form method = "get" action = "processStatisticUpdate.php" style = "display:inline;">
+              <input type = "hidden" name = "player_id" value = "<?= $player_id ?>"/>
+              <select name = "game_id">
+                <option value = "">-- Select game to add / edit --</option>
+                <?php foreach ($all_games as $g): ?>
+                  <option value = "<?= $g->game_id() ?>">
+                    #<?= $g->game_id() ?>:
+                    <?= htmlspecialchars($g->home_team()) ?>
+                    vs
+                    <?= htmlspecialchars($g->away_team()) ?>
+                    (<?= htmlspecialchars($g->game_date()) ?>)
+                  </option>
+                <?php endforeach; ?>
+              </select>
+              <button type = "submit" class = "btn-save" style = "padding:3px 10px;">
+                Add / Edit Game Stat
+              </button>
+            </form>
+          </div>
+        <?php endif; ?>
+
+        <!-- Table of existing per-game rows -->
+        <?php if (empty($game_stats)): ?>
+          <div class = "no-games">No per-game stats recorded for this player yet.</div>
+        <?php else: ?>
+          <table>
             <tr>
-              <th style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Field</th>
-              <th style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Value</th>
+              <th>Game #</th>
+              <th>Date</th>
+              <th>Goals</th>
+              <th>Assists</th>
+              <th>HR</th>
+              <th>Time</th>
+              <th>Actions</th>
             </tr>
-            <tr>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Goals</td>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                <input type = "number" name = "goals" min = "0"
-                       value = "<?= $stat->goals() ?>"/>
-              </td>
-            </tr>
-            <tr>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Assists</td>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                <input type = "number" name = "assists" min = "0"
-                       value = "<?= $stat->assists() ?>"/>
-              </td>
-            </tr>
-            <tr>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Home Runs</td>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                <input type = "number" name = "homeruns" min = "0"
-                       value = "<?= $stat->home_runs() ?>"/>
-              </td>
-            </tr>
-            <tr>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Time (mins)</td>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                <input type = "number" name = "mins" min = "0"
-                       value = "<?= explode(':', $stat->time_on_field())[0] ?>"/>
-              </td>
-            </tr>
-            <tr>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Time (secs)</td>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                <input type = "number" name = "secs" min = "0" max = "59"
-                       value = "<?= explode(':', $stat->time_on_field())[1] ?>"/>
-              </td>
-            </tr>
+            <?php foreach ($game_stats as $gs): ?>
+              <?php
+                // Look up the game date for display
+                $gdate = '';
+                foreach ($all_games as $g)
+                  {
+                  if ($g->game_id() === $gs->gameId())
+                    {
+                    $gdate = $g->game_date();
+                    break;
+                    }
+                  }
+              ?>
+              <tr>
+                <td><?= (int)$gs->gameId()    ?></td>
+                <td><?= htmlspecialchars($gdate) ?></td>
+                <td><?= $gs->goals()           ?></td>
+                <td><?= $gs->assists()         ?></td>
+                <td><?= $gs->homeRuns()        ?></td>
+                <td><?= $gs->timeFormatted()   ?></td>
+                <td>
+                  <a class = "btn"
+                     href = "processStatisticUpdate.php?game_id=<?= $gs->gameId() ?>&player_id=<?= $player_id ?>">
+                    Edit
+                  </a>
+                  <a class = "btn-delete"
+                     href = "processStatisticDelete.php?game_id=<?= $gs->gameId() ?>&player_id=<?= $player_id ?>"
+                     onclick = "return confirm('Delete stats for Game #<?= $gs->gameId() ?>? Career totals will update automatically.');">
+                    Delete
+                  </a>
+                </td>
+              </tr>
+            <?php endforeach; ?>
           </table>
-          <br/>
-          <button type = "submit" name = "save_stats" class = "btn-save">Save Changes</button>
-        </form>
+        <?php endif; ?>
 
         <a class = "back-link" href = "role_management_page.php">&larr; Back to Management</a>
       </div>
@@ -172,17 +257,11 @@
     <?php
       $button = $_POST['button'] ?? '';
       if ($button == "Open Menu")
-        {
         MenuOpen(1, $menu_display_name, $menu_team_name, $_SESSION['role'] ?? '');
-        }
       elseif ($button == "Close Menu")
-        {
         MenuOpen(0, $menu_display_name, $menu_team_name, $_SESSION['role'] ?? '');
-        }
       else
-        {
         MenuOpen(0, $menu_display_name, $menu_team_name, $_SESSION['role'] ?? '');
-        }
     ?>
   </body>
 </html>

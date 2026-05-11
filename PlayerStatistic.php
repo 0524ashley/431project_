@@ -1,13 +1,14 @@
 <?php
 // =============================================================
-//  PlayerStatistic — represents one row from Users_statistics,
-//  modelled after the course-provided example class.
+//  PlayerStatistic — represents one row from Player_statistics,
+//  which stores career totals for a single player.
 //
 //    PlayerStatistic::getById($db, $playerId)
 //        Returns PlayerStatistic|null for the given Player_ID.
 //
 //    PlayerStatistic::update($db, $playerId, $data)
-//        Updates an existing stats row. Returns true on success.
+//        Updates an existing career-totals row.
+//        Returns true on success.
 //        $data keys: goals, assists, home_runs, time_mins, time_secs
 //
 //    PlayerStatistic::insertDefault($db, $playerId)
@@ -25,57 +26,23 @@ class PlayerStatistic
   private $home_runs     = 0;
 
 
-  // =============================================================
-  //  playerId() prototypes:
-  //    int    playerId()            returns the player's DB ID.
-  //    void   playerId(int $value)  sets the player's DB ID.
-  // =============================================================
   function playerId()
     {
-    // int playerId()
     if (func_num_args() == 0)
-      {
       return $this->playerId;
-      }
-
-    // void playerId($value)
     else if (func_num_args() == 1)
-      {
       $this->playerId = (int)func_get_arg(0);
-      }
-
     return $this;
     }
 
-
-  // =============================================================
-  //  time_on_field() prototypes:
-  //    string time_on_field()
-  //        Returns time in "minutes:seconds" format.
-  //
-  //    void time_on_field(string $value)
-  //        Sets time in "minutes:seconds" format.
-  //
-  //    void time_on_field(array $value)
-  //        Sets time in [minutes, seconds] format.
-  //
-  //    void time_on_field(int $minutes, int $seconds)
-  //        Sets time using two separate values.
-  // =============================================================
   function time_on_field()
     {
-    // string time_on_field()
     if (func_num_args() == 0)
-      {
       return $this->time_on_field['MINS'] . ':' . $this->time_on_field['SECS'];
-      }
-
-    // void time_on_field($value)
     else if (func_num_args() == 1)
       {
       $value = func_get_arg(0);
-
-      if (is_string($value)) $value = explode(':', $value); // convert string to array
+      if (is_string($value)) $value = explode(':', $value);
       if (is_array($value))
         {
         if (count($value) >= 2) $this->time_on_field['SECS'] = (int)$value[1];
@@ -83,103 +50,54 @@ class PlayerStatistic
         $this->time_on_field['MINS'] = (int)$value[0];
         }
       }
-
-    // void time_on_field($mins, $secs)
     else if (func_num_args() == 2)
       {
       $this->time_on_field['MINS'] = (int)func_get_arg(0);
       $this->time_on_field['SECS'] = (int)func_get_arg(1);
       }
-
     return $this;
     }
 
-
-  // =============================================================
-  //  goals() prototypes:
-  //    int  goals()            returns the number of goals scored.
-  //    void goals(int $value)  sets the number of goals scored.
-  // =============================================================
   function goals()
     {
-    // int goals()
-    if (func_num_args() == 0)
-      {
-      return $this->goals;
-      }
-
-    // void goals($value)
-    else if (func_num_args() == 1)
-      {
-      $this->goals = (int)func_get_arg(0);
-      }
-
+    if (func_num_args() == 0)   return $this->goals;
+    else if (func_num_args() == 1) $this->goals = (int)func_get_arg(0);
     return $this;
     }
 
-
-  // =============================================================
-  //  assists() prototypes:
-  //    int  assists()            returns the number of assists.
-  //    void assists(int $value)  sets the number of assists.
-  // =============================================================
   function assists()
     {
-    // int assists()
-    if (func_num_args() == 0)
-      {
-      return $this->assists;
-      }
-
-    // void assists($value)
-    else if (func_num_args() == 1)
-      {
-      $this->assists = (int)func_get_arg(0);
-      }
-
+    if (func_num_args() == 0)   return $this->assists;
+    else if (func_num_args() == 1) $this->assists = (int)func_get_arg(0);
     return $this;
     }
 
-
-  // =============================================================
-  //  home_runs() prototypes:
-  //    int  home_runs()            returns the number of home runs.
-  //    void home_runs(int $value)  sets the number of home runs.
-  // =============================================================
   function home_runs()
     {
-    // int home_runs()
-    if (func_num_args() == 0)
-      {
-      return $this->home_runs;
-      }
-
-    // void home_runs($value)
-    else if (func_num_args() == 1)
-      {
-      $this->home_runs = (int)func_get_arg(0);
-      }
-
+    if (func_num_args() == 0)   return $this->home_runs;
+    else if (func_num_args() == 1) $this->home_runs = (int)func_get_arg(0);
     return $this;
+    }
+
+  // Helper aliases for camelCase access
+  function homeRuns()   { return $this->home_runs(); }
+  function timeMins()   { return $this->time_on_field['MINS']; }
+  function timeSecs()   { return $this->time_on_field['SECS']; }
+  function timeFormatted()
+    {
+    return str_pad($this->time_on_field['MINS'], 2, '0', STR_PAD_LEFT) . ':' . 
+           str_pad($this->time_on_field['SECS'], 2, '0', STR_PAD_LEFT);
     }
 
 
   // =============================================================
   //  Constructor
-  //  Accepts individual positional arguments, or a single
-  //  tab-separated string containing all values in order:
-  //    playerId, time_on_field, goals, assists, home_runs
   // =============================================================
   function __construct($playerId = 0, $time = "0:0", $goals = 0, $assists = 0, $home_runs = 0)
     {
-    // If $playerId contains a tab character, all attributes are
-    // packed into a single tab-separated string.
     if (is_string($playerId) && strpos($playerId, "\t") !== false)
-      {
       list($playerId, $time, $goals, $assists, $home_runs) = explode("\t", $playerId);
-      }
 
-    // Delegate to setter methods so validation logic is applied.
     $this->playerId($playerId);
     $this->time_on_field($time);
     $this->goals($goals);
@@ -187,20 +105,8 @@ class PlayerStatistic
     $this->home_runs($home_runs);
     }
 
+  function __toString() { return var_export($this, true); }
 
-  // =============================================================
-  //  __toString()
-  // =============================================================
-  function __toString()
-    {
-    return var_export($this, true);
-    }
-
-
-  // =============================================================
-  //  toTSV()
-  //  Returns a tab-separated string of all instance attributes.
-  // =============================================================
   function toTSV()
     {
     return implode("\t", [
@@ -212,12 +118,6 @@ class PlayerStatistic
     ]);
     }
 
-
-  // =============================================================
-  //  fromTSV(string $tsvString)
-  //  Sets instance attributes from a tab-separated string
-  //  in the same order as toTSV().
-  // =============================================================
   function fromTSV(string $tsvString)
     {
     list($playerId, $time, $goals, $assists, $home_runs) = explode("\t", $tsvString);
@@ -231,19 +131,18 @@ class PlayerStatistic
 
   // =============================================================
   //  PlayerStatistic::getById($db, $playerId)
-  //  Fetches the stats row for the given Player_ID.
-  //  Returns PlayerStatistic|null.
+  //  Reads from Player_statistics (renamed table, Total_ columns).
   // =============================================================
   public static function getById(mysqli $db, int $playerId)
     {
     $stmt = $db->prepare("
       SELECT Player_ID,
-             Goals,
-             Assists,
-             Home_runs,
-             Time_on_field_mins,
-             Time_on_field_secs
-      FROM   Users_statistics
+             Total_goals,
+             Total_assists,
+             Total_home_runs,
+             Total_time_on_field_mins,
+             Total_time_on_field_secs
+      FROM   Player_statistics
       WHERE  Player_ID = ?
     ");
     if (!$stmt) return null;
@@ -253,9 +152,7 @@ class PlayerStatistic
     $stmt->bind_result($pid, $goals, $assists, $home_runs, $t_mins, $t_secs);
     $stat = null;
     if ($stmt->fetch())
-      {
       $stat = new PlayerStatistic($pid, $t_mins . ':' . $t_secs, $goals, $assists, $home_runs);
-      }
     $stmt->close();
     return $stat;
     }
@@ -263,9 +160,8 @@ class PlayerStatistic
 
   // =============================================================
   //  PlayerStatistic::update($db, $playerId, $data)
-  //  Updates the stats row for the given Player_ID.
+  //  Writes to Player_statistics using Total_ column names.
   //  $data keys: goals, assists, home_runs, time_mins, time_secs
-  //  Returns true on success.
   // =============================================================
   public static function update(mysqli $db, int $playerId, array $data)
     {
@@ -276,12 +172,12 @@ class PlayerStatistic
     $secs      = min(59, max(0, (int)($data['time_secs'] ?? 0)));
 
     $stmt = $db->prepare("
-      UPDATE Users_statistics
-      SET    Goals              = ?,
-             Assists            = ?,
-             Home_runs          = ?,
-             Time_on_field_mins = ?,
-             Time_on_field_secs = ?
+      UPDATE Player_statistics
+      SET    Total_goals              = ?,
+             Total_assists            = ?,
+             Total_home_runs          = ?,
+             Total_time_on_field_mins = ?,
+             Total_time_on_field_secs = ?
       WHERE  Player_ID = ?
     ");
     if (!$stmt) return false;
@@ -295,14 +191,12 @@ class PlayerStatistic
 
   // =============================================================
   //  PlayerStatistic::insertDefault($db, $playerId)
-  //  Inserts a zeroed stats row for a newly registered player.
-  //  Called by register.php after inserting into Users_info.
-  //  Returns true on success.
+  //  Inserts a zeroed row into Player_statistics for a new player.
   // =============================================================
   public static function insertDefault(mysqli $db, int $playerId)
     {
     $stmt = $db->prepare("
-      INSERT INTO Users_statistics (Player_ID) VALUES (?)
+      INSERT INTO Player_statistics (Player_ID) VALUES (?)
     ");
     if (!$stmt) return false;
 
