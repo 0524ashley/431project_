@@ -39,11 +39,6 @@
 
   // ------------------------------------------------------------
   // Send password reset email using Gmail SMTP.
-  //
-  // IMPORTANT:
-  // - $smtp_user = your Gmail address
-  // - $smtp_pass = Google App Password, NOT your normal Gmail password
-  // - Gmail account must have 2-Step Verification enabled
   // ------------------------------------------------------------
   function send_reset_email($to, $new_pass, &$smtp_error)
     {
@@ -69,6 +64,9 @@
       return false;
       }
 
+
+     
+    // Debug: Log SMTP conversation to a file for troubleshooting  
     // Opening response should be 220
     $response = smtp_get_response($socket);
     if (substr($response, 0, 3) !== "220")
@@ -167,6 +165,9 @@
       return false;
       }
 
+
+
+    // Construct email headers and body
     $headers = "From: $from\r\n";
     $headers .= "To: $to\r\n";
     $headers .= "Subject: $subject\r\n";

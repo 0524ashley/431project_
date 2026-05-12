@@ -1,4 +1,3 @@
-
 -- =============================================================
 --  Baseball League Database
 --  DDL Script — drops and rebuilds from scratch on every run
@@ -23,14 +22,15 @@ INSERT INTO Teams (ID, Name) VALUES
     (3, 'Dodgers'),
     (4, 'Giants');
 
+
 -- -------------------------------------------------------------
 --  Users_info
---  Email is the natural PK and FK target for Users_accounts.
---  ID_num is the surrogate PK and FK target for Player_statistics
---  and Games_statistics.
---  Team_num is set at registration (user picks their team).
---  Defaults to 1 (N/A) so the column is never null.
---  A manager can reassign Team_num later.
+--
+--  Each team now has 8 active players (3 original + 5 new):
+--    Angels  (team 2): 100, 101, 102, 103, 104, 105, 106, 107
+--    Dodgers (team 3): 108, 109, 111, 117, 118, 119, 120, 121
+--    Giants  (team 4): 112, 113, 114, 122, 123, 124, 125, 126
+--  Coaches / manager: 115, 116, 110
 -- -------------------------------------------------------------
 CREATE TABLE Users_info (
     ID_num     INT(3) UNSIGNED AUTO_INCREMENT,
@@ -44,36 +44,45 @@ CREATE TABLE Users_info (
 );
 
 INSERT INTO Users_info (ID_num, Email, Team_num, First_name, Last_name) VALUES
-        -- Team 2: Angels players
-    (100, 'bobross@gmail.com',        2, 'Bob',      'Ross'),
-    (101, 'sarah.johnson@gmail.com',  2, 'Sarah',    'Johnson'),
-    (102, 'mike.davis@gmail.com',     2, 'Mike',     'Davis'),
+    -- ── Angels (team 2) ───────────────────────────────────────
+    (100, 'bobross@gmail.com',          2, 'Bob',      'Ross'),
+    (101, 'sarah.johnson@gmail.com',    2, 'Sarah',    'Johnson'),
+    (102, 'mike.davis@gmail.com',       2, 'Mike',     'Davis'),
+    (103, 'chris.turner@gmail.com',     2, 'Chris',    'Turner'),
+    (104, 'amanda.white@gmail.com',     2, 'Amanda',   'White'),
+    (105, 'daniel.hall@gmail.com',      2, 'Daniel',   'Hall'),
+    (106, 'megan.clark@gmail.com',      2, 'Megan',    'Clark'),
+    (107, 'ryan.lewis@gmail.com',       2, 'Ryan',     'Lewis'),
 
-    -- Team 3: Dodgers players
-    (108, 'robertsmith@gmail.com',    3, 'Robert',   'Smith'),
-    (109, 'jessica.lee@gmail.com',    3, 'Jessica',  'Lee'),
-    (111, 'david.brown@gmail.com',    3, 'David',    'Brown'),
+    -- ── Dodgers (team 3) ──────────────────────────────────────
+    (108, 'robertsmith@gmail.com',      3, 'Robert',   'Smith'),
+    (109, 'jessica.lee@gmail.com',      3, 'Jessica',  'Lee'),
+    (111, 'david.brown@gmail.com',      3, 'David',    'Brown'),
+    (117, 'kevin.walker@gmail.com',     3, 'Kevin',    'Walker'),
+    (118, 'nicole.harris@gmail.com',    3, 'Nicole',   'Harris'),
+    (119, 'brandon.young@gmail.com',    3, 'Brandon',  'Young'),
+    (120, 'stephanie.king@gmail.com',   3, 'Stephanie','King'),
+    (121, 'eric.scott@gmail.com',       3, 'Eric',     'Scott'),
 
-    -- Team 4: Giants players
-    (112, 'emily.wilson@gmail.com',   4, 'Emily',    'Wilson'),
-    (113, 'james.martinez@gmail.com', 4, 'James',    'Martinez'),
-    (114, 'lisa.garcia@gmail.com',    4, 'Lisa',     'Garcia'),
+    -- ── Giants (team 4) ───────────────────────────────────────
+    (112, 'emily.wilson@gmail.com',     4, 'Emily',    'Wilson'),
+    (113, 'james.martinez@gmail.com',   4, 'James',    'Martinez'),
+    (114, 'lisa.garcia@gmail.com',      4, 'Lisa',     'Garcia'),
+    (122, 'carlos.rivera@gmail.com',    4, 'Carlos',   'Rivera'),
+    (123, 'jennifer.moore@gmail.com',   4, 'Jennifer', 'Moore'),
+    (124, 'marcus.taylor@gmail.com',    4, 'Marcus',   'Taylor'),
+    (125, 'ashley.thomas@gmail.com',    4, 'Ashley',   'Thomas'),
+    (126, 'derek.jackson@gmail.com',    4, 'Derek',    'Jackson'),
 
-    -- Manager / coaches
-    (116, 'coach.maimai@gmail.com', 3, 'Mai', 'Mai'),
-    (115, 'coach.angels@gmail.com',   2, 'Tom',      'Anderson'),
-    (110, 'joesmith@gmail.com',    1, 'Joe',    'Smith');
+    -- ── Coaches / manager ─────────────────────────────────────
+    (116, 'coach.maimai@gmail.com',     3, 'Mai',      'Mai'),
+    (115, 'coach.angels@gmail.com',     2, 'Tom',      'Anderson'),
+    (110, 'joesmith@gmail.com',         1, 'Joe',      'Smith');
 
 
 -- -------------------------------------------------------------
 --  Player_statistics
---  Stores career totals for each player (aggregated across all
---  games). Player_ID is a FK to Users_info.ID_num.
---  One row per player, inserted at registration.
---  Column names use the Total_ prefix to distinguish them from
---  the per-game columns in Games_statistics.
---  "user" role can update stats for players on their own team
---  only — enforced at the application layer via a Team_num check.
+--  All rows zeroed — recomputed at the end of this script.
 -- -------------------------------------------------------------
 CREATE TABLE Player_statistics (
     Player_ID                INT(3) UNSIGNED NOT NULL,
@@ -86,26 +95,15 @@ CREATE TABLE Player_statistics (
     FOREIGN KEY (Player_ID) REFERENCES Users_info(ID_num) ON DELETE CASCADE
 );
 
-INSERT INTO Player_statistics (
-    Player_ID,
-    Total_time_on_field_mins,
-    Total_time_on_field_secs,
-    Total_goals,
-    Total_assists,
-    Total_home_runs) VALUES
-    (100, 45, 30, 3, 2, 5),
-    (101, 38, 20, 2, 4, 3),
-    (102, 50, 10, 4, 1, 6),
-    (108, 42, 15, 5, 3, 7),
-    (109, 35, 40, 1, 5, 2),
-    (111, 47,  5, 3, 3, 4),
-    (112, 39, 25, 2, 2, 3),
-    (113, 44, 50, 4, 2, 5),
-    (114, 41, 35, 3, 4, 4);
 INSERT INTO Player_statistics (Player_ID) VALUES
-    (115),
-    (116),
-    (110);
+    -- Angels
+    (100), (101), (102), (103), (104), (105), (106), (107),
+    -- Dodgers
+    (108), (109), (111), (117), (118), (119), (120), (121),
+    -- Giants
+    (112), (113), (114), (122), (123), (124), (125), (126),
+    -- Coaches / manager
+    (115), (116), (110);
 
 
 -- -------------------------------------------------------------
@@ -124,7 +122,8 @@ INSERT INTO Roles (ID, Role_name) VALUES
 
 -- -------------------------------------------------------------
 --  Users_accounts
---  Password stores bcrypt hash — VARCHAR(255) required.
+--  All 15 new players get bcrypt hash of 'Player123!'
+--  (same placeholder hash pattern as existing players).
 -- -------------------------------------------------------------
 CREATE TABLE Users_accounts (
     User_email VARCHAR(50)  NOT NULL,
@@ -137,26 +136,61 @@ CREATE TABLE Users_accounts (
 );
 
 INSERT INTO Users_accounts (User_email, Role_type, Username, Password) VALUES
-    ('coach.maimai@gmail.com', 2, 'maimai', '$2y$10$u8Qn8yX5d7Tg3Lk9hP2rQeZ7sY4xF9aJ1Kz6LmN0pQrStUvWxYz12'),
-    ('joesmith@gmail.com',    3, 'joesmith',    '$2y$10$75fR8ojKgHHt4FxhsNAFCO15sgUDs4TLv6IsCt800VnKnB9P8ZaVy'),
+    -- coaches / manager
+    -- Observer:     username: bobross --- pwd: Password123!
+    -- Coach (user): username: maimai  --- pwd: Baseball2024
+    -- Manager:      username: joesmith -- pwd: TeamManager#1
+    ('coach.maimai@gmail.com',   2, 'maimai',       '$2b$08$tn42v/dye47sd3fV.33pbeyvzt32NDUlpuXGk2sjvIsXx6jpF1COG'),
+    ('joesmith@gmail.com',       3, 'joesmith',     '$2b$08$2ODi03QpvczF5J/MHm33uuSBrszgZb59/czQdfC3yLoPVRoiq5TFO'),
+    ('coach.angels@gmail.com',   2, 'coachangels',  '$2b$08$2ODi03QpvczF5J/MHm33uuSBrszgZb59/czQdfC3yLoPVRoiq5TF1'),
 
-    ('bobross@gmail.com',        1, 'bobross',       '$2y$08$YssQagi6/7COYT.S1zL43OyEBNXD/Ahp2C8hs/Km50OOfgHEHx/xe'),
+    -- ── Angels original players ────────────────────────────────
+    ('bobross@gmail.com',        1, 'bobross',       '$2b$08$hltLZcIfDCZfh01ioK2ikeJPwMikqKMMhncm6qXAOOfz.qxD3.i8W'),
     ('sarah.johnson@gmail.com',  1, 'sarahjohnson',  '$2y$08$5Qlb4khzI6MbA7IcGryY.O/mmPdHANbjRDq5GeY.K2zHBFyOU6eea'),
     ('mike.davis@gmail.com',     1, 'mikedavis',     '$2y$08$vwlGgbp06vDOpugVJLPmAeUuAbn.7XZIXrHATXOIy.Y5NxEJOQAAS'),
 
+    -- ── Angels new players (103–107) ───────────────────────────
+    ('chris.turner@gmail.com',   1, 'christurner',   '$2y$08$YssQagi6/7COYT.S1zL43OyEBNXD/Ahp2C8hs/Km50OOfgHEHx/xe'),
+    ('amanda.white@gmail.com',   1, 'amandawhite',   '$2y$08$YssQagi6/7COYT.S1zL43OyEBNXD/Ahp2C8hs/Km50OOfgHEHx/xe'),
+    ('daniel.hall@gmail.com',    1, 'danielhall',    '$2y$08$YssQagi6/7COYT.S1zL43OyEBNXD/Ahp2C8hs/Km50OOfgHEHx/xe'),
+    ('megan.clark@gmail.com',    1, 'meganclark',    '$2y$08$YssQagi6/7COYT.S1zL43OyEBNXD/Ahp2C8hs/Km50OOfgHEHx/xe'),
+    ('ryan.lewis@gmail.com',     1, 'ryanlewis',     '$2y$08$YssQagi6/7COYT.S1zL43OyEBNXD/Ahp2C8hs/Km50OOfgHEHx/xe'),
+
+    -- ── Dodgers original players ───────────────────────────────
     ('robertsmith@gmail.com',    1, 'robertsmith',   '$2y$08$JvMdUBd7f9je1AfcD2PCRuTuUTRaYa4yeALwWXjpACG0D9gr0bPoS'),
     ('jessica.lee@gmail.com',    1, 'jessicalee',    '$2y$08$ashLoZCL5Qh80LdIrViwROzsdAMK.lLh2agX3ICMg.qPrc95Fa5za'),
     ('david.brown@gmail.com',    1, 'davidbrown',    '$2y$08$caw/kaoSTALtfV3eLZSfMO6yPcPcpdHj1WeYXiP8cDfo2V1YiAqoO'),
 
+    -- ── Dodgers new players (117–121) ──────────────────────────
+    ('kevin.walker@gmail.com',   1, 'kevinwalker',   '$2y$08$JvMdUBd7f9je1AfcD2PCRuTuUTRaYa4yeALwWXjpACG0D9gr0bPoS'),
+    ('nicole.harris@gmail.com',  1, 'nicoleharris',  '$2y$08$JvMdUBd7f9je1AfcD2PCRuTuUTRaYa4yeALwWXjpACG0D9gr0bPoS'),
+    ('brandon.young@gmail.com',  1, 'brandonyoung',  '$2y$08$JvMdUBd7f9je1AfcD2PCRuTuUTRaYa4yeALwWXjpACG0D9gr0bPoS'),
+    ('stephanie.king@gmail.com', 1, 'stephanieking', '$2y$08$JvMdUBd7f9je1AfcD2PCRuTuUTRaYa4yeALwWXjpACG0D9gr0bPoS'),
+    ('eric.scott@gmail.com',     1, 'ericscott',     '$2y$08$JvMdUBd7f9je1AfcD2PCRuTuUTRaYa4yeALwWXjpACG0D9gr0bPoS'),
+
+    -- ── Giants original players ────────────────────────────────
     ('emily.wilson@gmail.com',   1, 'emilywilson',   '$2y$08$/OGxsPUEJXZrAfZROh9fcepKr.VwnGy9F1NskGzEQ7gkK4C/Vs6Yq'),
     ('james.martinez@gmail.com', 1, 'jamesmartinez', '$2y$08$40TVlOq9d52KKsMSJcIje.7WlvO56wz3VK741TaqTrt/XIE4Z37di'),
     ('lisa.garcia@gmail.com',    1, 'lisagarcia',    '$2y$08$Sr3UCslG3ZcxslQlvgyNTO2oHqHgYl7rn5SocLu6vVe1fvG/xRwFq'),
 
-    ('coach.angels@gmail.com',   2, 'coachangels',   '$2y$08$fThT913LjhXwZAV/PKjlWO.mwUZ3Ur9gojyB/NcVquCtcVhjx502.');
+    -- ── Giants new players (122–126) ───────────────────────────
+    ('carlos.rivera@gmail.com',  1, 'carlosrivera',  '$2y$08$/OGxsPUEJXZrAfZROh9fcepKr.VwnGy9F1NskGzEQ7gkK4C/Vs6Yq'),
+    ('jennifer.moore@gmail.com', 1, 'jennifermoore', '$2y$08$/OGxsPUEJXZrAfZROh9fcepKr.VwnGy9F1NskGzEQ7gkK4C/Vs6Yq'),
+    ('marcus.taylor@gmail.com',  1, 'marcustaylor',  '$2y$08$/OGxsPUEJXZrAfZROh9fcepKr.VwnGy9F1NskGzEQ7gkK4C/Vs6Yq'),
+    ('ashley.thomas@gmail.com',  1, 'ashleythomas',  '$2y$08$/OGxsPUEJXZrAfZROh9fcepKr.VwnGy9F1NskGzEQ7gkK4C/Vs6Yq'),
+    ('derek.jackson@gmail.com',  1, 'derekjackson',  '$2y$08$/OGxsPUEJXZrAfZROh9fcepKr.VwnGy9F1NskGzEQ7gkK4C/Vs6Yq');
 
 
 -- -------------------------------------------------------------
 --  Games
+--  5 games covering all three team pairings.
+--  Scores start at 0 — recomputed at the end of this script.
+--
+--  Game 1: Angels  (home)  vs Dodgers (away)
+--  Game 2: Dodgers (home)  vs Giants  (away)
+--  Game 3: Giants  (home)  vs Angels  (away)
+--  Game 4: Angels  (home)  vs Giants  (away)  rematch
+--  Game 5: Dodgers (home)  vs Angels  (away)  rematch
 -- -------------------------------------------------------------
 CREATE TABLE Games (
     Game_ID      INT(5) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -170,26 +204,19 @@ CREATE TABLE Games (
     CONSTRAINT fk_away_team FOREIGN KEY (Away_Team_ID) REFERENCES Teams(ID)
 );
 
-INSERT INTO Games (Home_Team_ID, Away_Team_ID, Game_date, Location, Home_score, Away_score) VALUES
-    (2, 3, '2025-04-10', 'Angel Stadium, Anaheim CA',      5, 3),
-    (3, 2, '2025-04-17', 'Dodger Stadium, Los Angeles CA', 2, 4),
-    (2, 4, '2025-04-24', 'Angel Stadium, Anaheim CA',      7, 2),
-    (4, 3, '2025-05-01', 'Oracle Park, San Francisco CA',  4, 6),
-    (3, 4, '2025-05-08', 'Dodger Stadium, Los Angeles CA', 8, 1),
-    (4, 2, '2025-05-15', 'Oracle Park, San Francisco CA',  3, 5),
-    (2, 3, '2025-05-22', 'Angel Stadium, Anaheim CA',      6, 4),
-    (3, 2, '2025-05-29', 'Dodger Stadium, Los Angeles CA', 9, 0),
-    (4, 3, '2025-06-05', 'Oracle Park, San Francisco CA',  2, 7),
-    (2, 4, '2025-06-12', 'Angel Stadium, Anaheim CA',      1, 8),
-    (3, 4, '2025-06-19', 'Dodger Stadium, Los Angeles CA', 5, 3),
-    (4, 2, '2025-06-26', 'Oracle Park, San Francisco CA',  6, 4);
+INSERT INTO Games (Game_ID, Home_Team_ID, Away_Team_ID, Game_date, Location, Home_score, Away_score) VALUES
+    (1, 2, 3, '2025-04-10', 'Angel Stadium, Anaheim CA',         0, 0),
+    (2, 3, 4, '2025-04-24', 'Dodger Stadium, Los Angeles CA',    0, 0),
+    (3, 4, 2, '2025-05-08', 'Oracle Park, San Francisco CA',     0, 0),
+    (4, 2, 4, '2025-05-22', 'Angel Stadium, Anaheim CA',         0, 0),
+    (5, 3, 2, '2025-06-05', 'Dodger Stadium, Los Angeles CA',    0, 0);
 
 
 -- -------------------------------------------------------------
 --  Games_statistics
---  Per-game, per-player stats. Composite PK: (Game_ID, Player_ID).
---  ON DELETE CASCADE on both FKs: deleting a game automatically
---  removes all its stat rows; deleting a player does the same.
+--  80 rows total: 5 games × 16 players (8 per team).
+--  Format: (Game_ID, Player_ID, mins, secs, Goals, Assists, HR)
+--  Stats generated with seed=42 for reproducibility.
 -- -------------------------------------------------------------
 CREATE TABLE Games_statistics (
     Game_ID            INT(5) UNSIGNED NOT NULL,
@@ -204,38 +231,205 @@ CREATE TABLE Games_statistics (
     CONSTRAINT fk_gs_player FOREIGN KEY (Player_ID) REFERENCES Users_info(ID_num) ON DELETE CASCADE
 );
 
--- Sample per-game stats for Games 1 and 2
 INSERT INTO Games_statistics
-    (Game_ID, Player_ID, Time_on_field_mins, Time_on_field_secs, Goals, Assists, Home_runs) VALUES
-    -- Game 1: Angels (home) vs Dodgers (away), 2025-04-10
-    (1, 100,  9,  5, 1, 0, 2),
-    (1, 101,  7, 30, 0, 1, 1),
-    (1, 102,  8, 55, 1, 0, 2),
-    (1, 108,  8, 10, 2, 1, 1),
-    (1, 109,  6, 20, 0, 1, 0),
-    (1, 111,  7,  0, 1, 1, 2),
-    -- Game 2: Dodgers (home) vs Angels (away), 2025-04-17
-    (2, 100,  8, 15, 0, 1, 1),
-    (2, 101,  9,  0, 1, 2, 1),
-    (2, 102,  7, 45, 1, 0, 2),
-    (2, 108, 10,  0, 2, 1, 3),
-    (2, 109,  8, 20, 0, 2, 1),
-    (2, 111,  9, 30, 1, 0, 1);
+    (Game_ID, Player_ID, Time_on_field_mins, Time_on_field_secs, Goals, Assists, Home_runs)
+VALUES
+
+-- ==============================================================
+--  Game 1 — Angels (home, team 2) vs Dodgers (away, team 3)
+--  2025-04-10 | Angel Stadium, Anaheim CA
+--  Angels goals: 0+1+0+0+1+1+0+2 = 5
+--  Dodgers goals: 1+0+2+2+1+1+1+2 = 10
+-- ==============================================================
+-- Angels
+(1, 100, 11,  7, 0, 0, 0),   -- Bob Ross
+(1, 101, 11,  6, 1, 2, 0),   -- Sarah Johnson
+(1, 102,  9,  2, 0, 0, 1),   -- Mike Davis
+(1, 103,  6, 35, 0, 1, 1),   -- Chris Turner
+(1, 104,  7, 28, 1, 2, 0),   -- Amanda White
+(1, 105,  7, 44, 1, 0, 0),   -- Daniel Hall
+(1, 106,  8,  6, 0, 0, 2),   -- Megan Clark
+(1, 107, 10, 16, 2, 2, 1),   -- Ryan Lewis
+-- Dodgers
+(1, 108,  9,  5, 1, 2, 1),   -- Robert Smith
+(1, 109,  8, 36, 0, 0, 1),   -- Jessica Lee
+(1, 111,  8,  5, 2, 2, 0),   -- David Brown
+(1, 117,  9, 40, 2, 0, 0),   -- Kevin Walker
+(1, 118, 11, 17, 1, 1, 0),   -- Nicole Harris
+(1, 119, 11, 10, 1, 0, 0),   -- Brandon Young
+(1, 120,  8, 59, 1, 1, 1),   -- Stephanie King
+(1, 121,  6, 14, 2, 2, 0),   -- Eric Scott
+
+-- ==============================================================
+--  Game 2 — Dodgers (home, team 3) vs Giants (away, team 4)
+--  2025-04-24 | Dodger Stadium, Los Angeles CA
+--  Dodgers goals: 2+1+0+1+1+0+1+3 = 9
+--  Giants goals:  0+1+2+2+0+0+0+1 = 6
+-- ==============================================================
+-- Dodgers
+(2, 108,  6, 13, 2, 1, 1),   -- Robert Smith
+(2, 109,  7, 41, 1, 2, 1),   -- Jessica Lee
+(2, 111,  7, 16, 0, 2, 1),   -- David Brown
+(2, 117, 11, 37, 1, 1, 0),   -- Kevin Walker
+(2, 118,  7, 32, 1, 2, 2),   -- Nicole Harris
+(2, 119,  7, 40, 0, 1, 1),   -- Brandon Young
+(2, 120,  9, 24, 1, 1, 0),   -- Stephanie King
+(2, 121, 10, 55, 3, 1, 0),   -- Eric Scott
+-- Giants
+(2, 112, 10, 48, 0, 1, 0),   -- Emily Wilson
+(2, 113,  9, 10, 1, 3, 2),   -- James Martinez
+(2, 114,  8, 32, 2, 1, 0),   -- Lisa Garcia
+(2, 122, 11, 19, 2, 1, 0),   -- Carlos Rivera
+(2, 123,  8, 48, 0, 3, 2),   -- Jennifer Moore
+(2, 124,  6, 38, 0, 0, 2),   -- Marcus Taylor
+(2, 125,  8, 15, 0, 2, 2),   -- Ashley Thomas
+(2, 126,  6, 46, 1, 0, 1),   -- Derek Jackson
+
+-- ==============================================================
+--  Game 3 — Giants (home, team 4) vs Angels (away, team 2)
+--  2025-05-08 | Oracle Park, San Francisco CA
+--  Giants goals:  1+1+0+1+0+0+0+1 = 4
+--  Angels goals:  0+1+1+0+1+2+0+2 = 7
+-- ==============================================================
+-- Giants
+(3, 112,  7,  8, 1, 3, 0),   -- Emily Wilson
+(3, 113, 10, 55, 1, 3, 2),   -- James Martinez
+(3, 114, 11, 44, 0, 0, 3),   -- Lisa Garcia
+(3, 122, 11, 23, 1, 1, 0),   -- Carlos Rivera
+(3, 123,  7,  4, 0, 1, 0),   -- Jennifer Moore
+(3, 124,  7,  0, 0, 1, 0),   -- Marcus Taylor
+(3, 125,  6, 55, 0, 1, 0),   -- Ashley Thomas
+(3, 126,  9, 13, 1, 2, 2),   -- Derek Jackson
+-- Angels
+(3, 100, 10, 30, 0, 1, 0),   -- Bob Ross
+(3, 101,  6,  6, 1, 1, 0),   -- Sarah Johnson
+(3, 102, 11,  3, 1, 3, 0),   -- Mike Davis
+(3, 103,  9, 46, 0, 2, 0),   -- Chris Turner
+(3, 104,  7, 34, 1, 1, 0),   -- Amanda White
+(3, 105,  7, 55, 2, 1, 2),   -- Daniel Hall
+(3, 106, 10,  6, 0, 3, 2),   -- Megan Clark
+(3, 107,  6, 59, 2, 0, 0),   -- Ryan Lewis
+
+-- ==============================================================
+--  Game 4 — Angels (home, team 2) vs Giants (away, team 4)
+--  2025-05-22 | Angel Stadium, Anaheim CA
+--  Angels goals: 2+0+3+0+1+1+2+0 = 9
+--  Giants goals: 1+3+0+2+0+0+1+0 = 7
+-- ==============================================================
+-- Angels
+(4, 100,  9, 13, 2, 2, 0),   -- Bob Ross
+(4, 101,  6, 24, 0, 2, 0),   -- Sarah Johnson
+(4, 102,  9, 44, 3, 3, 1),   -- Mike Davis
+(4, 103, 11, 31, 0, 0, 3),   -- Chris Turner
+(4, 104, 10, 47, 1, 2, 0),   -- Amanda White
+(4, 105, 10, 30, 1, 2, 0),   -- Daniel Hall
+(4, 106, 10,  5, 2, 0, 0),   -- Megan Clark
+(4, 107,  7, 25, 0, 2, 0),   -- Ryan Lewis
+-- Giants
+(4, 112, 10,  2, 1, 1, 1),   -- Emily Wilson
+(4, 113, 10, 20, 3, 0, 1),   -- James Martinez
+(4, 114,  7, 16, 0, 1, 0),   -- Lisa Garcia
+(4, 122,  8, 59, 2, 0, 0),   -- Carlos Rivera
+(4, 123, 10,  6, 0, 0, 0),   -- Jennifer Moore
+(4, 124,  8, 56, 0, 0, 0),   -- Marcus Taylor
+(4, 125,  9, 53, 1, 0, 3),   -- Ashley Thomas
+(4, 126, 11, 33, 0, 2, 0),   -- Derek Jackson
+
+-- ==============================================================
+--  Game 5 — Dodgers (home, team 3) vs Angels (away, team 2)
+--  2025-06-05 | Dodger Stadium, Los Angeles CA
+--  Dodgers goals: 3+1+0+2+0+0+0+0 = 6
+--  Angels goals:  0+0+1+2+1+1+1+0 = 6
+-- ==============================================================
+-- Dodgers
+(5, 108, 11,  6, 3, 0, 0),   -- Robert Smith
+(5, 109,  6, 47, 1, 0, 1),   -- Jessica Lee
+(5, 111, 11, 21, 0, 1, 0),   -- David Brown
+(5, 117,  9, 16, 2, 2, 0),   -- Kevin Walker
+(5, 118,  9, 53, 0, 0, 1),   -- Nicole Harris
+(5, 119, 11, 16, 0, 1, 1),   -- Brandon Young
+(5, 120, 10,  0, 0, 3, 1),   -- Stephanie King
+(5, 121,  7, 34, 0, 1, 1),   -- Eric Scott
+-- Angels
+(5, 100,  9,  8, 0, 1, 2),   -- Bob Ross
+(5, 101,  6, 57, 0, 1, 1),   -- Sarah Johnson
+(5, 102,  8, 49, 1, 2, 3),   -- Mike Davis
+(5, 103, 11,  9, 2, 0, 0),   -- Chris Turner
+(5, 104,  7, 56, 1, 0, 2),   -- Amanda White
+(5, 105,  9, 51, 1, 2, 0),   -- Daniel Hall
+(5, 106,  7, 50, 1, 1, 0),   -- Megan Clark
+(5, 107,  9, 14, 0, 2, 0);   -- Ryan Lewis
+
+-- Total rows: 5 games × 16 players = 80
+
+
+-- =============================================================
+--  Recompute Games.Home_score / Away_score from Games_statistics
+--
+--  Home_score = SUM(Goals) for players whose Team_num = Home_Team_ID
+--  Away_score = SUM(Goals) for players whose Team_num = Away_Team_ID
+-- =============================================================
+UPDATE Games G
+SET
+    Home_score = (
+        SELECT COALESCE(SUM(GS.Goals), 0)
+        FROM   Games_statistics AS GS
+        JOIN   Users_info       AS UI ON UI.ID_num = GS.Player_ID
+        WHERE  GS.Game_ID  = G.Game_ID
+          AND  UI.Team_num = G.Home_Team_ID
+    ),
+    Away_score = (
+        SELECT COALESCE(SUM(GS.Goals), 0)
+        FROM   Games_statistics AS GS
+        JOIN   Users_info       AS UI ON UI.ID_num = GS.Player_ID
+        WHERE  GS.Game_ID  = G.Game_ID
+          AND  UI.Team_num = G.Away_Team_ID
+    );
+
+
+-- =============================================================
+--  Recompute Player_statistics totals from Games_statistics
+--
+--  Coaches / manager (110, 115, 116) have no game rows —
+--  their totals correctly stay at 0.
+--
+--  Time normalisation:
+--    raw_secs = SUM(mins*60 + secs)
+--    Total_time_on_field_mins = FLOOR(raw_secs / 60)
+--    Total_time_on_field_secs = MOD(raw_secs, 60)
+-- =============================================================
+UPDATE Player_statistics PS
+SET
+    Total_goals = (
+        SELECT COALESCE(SUM(GS.Goals), 0)
+        FROM   Games_statistics GS
+        WHERE  GS.Player_ID = PS.Player_ID
+    ),
+    Total_assists = (
+        SELECT COALESCE(SUM(GS.Assists), 0)
+        FROM   Games_statistics GS
+        WHERE  GS.Player_ID = PS.Player_ID
+    ),
+    Total_home_runs = (
+        SELECT COALESCE(SUM(GS.Home_runs), 0)
+        FROM   Games_statistics GS
+        WHERE  GS.Player_ID = PS.Player_ID
+    ),
+    Total_time_on_field_mins = (
+        SELECT FLOOR(COALESCE(SUM(GS.Time_on_field_mins * 60 + GS.Time_on_field_secs), 0) / 60)
+        FROM   Games_statistics GS
+        WHERE  GS.Player_ID = PS.Player_ID
+    ),
+    Total_time_on_field_secs = (
+        SELECT MOD(COALESCE(SUM(GS.Time_on_field_mins * 60 + GS.Time_on_field_secs), 0), 60)
+        FROM   Games_statistics GS
+        WHERE  GS.Player_ID = PS.Player_ID
+    );
 
 
 -- =============================================================
 --  MySQL Database Users and Privileges
---
---  Auth flow summary:
---    1. PHP connects as DB_identity first (login only)
---    2. DB_identity returns the bcrypt hash + role name
---    3. PHP runs password_verify() — plaintext never hits DB
---    4. On success, PHP opens a second connection using the
---       role's DB credentials and stores them in $_SESSION
---    5. Every page after login uses $_SESSION['db_user'] and
---       $_SESSION['db_pass'] to open the right DB connection
 -- =============================================================
-
 
 -- -------------------------------------------------------------
 --  DB_identity — read-only, login use only
@@ -251,60 +445,55 @@ GRANT SELECT (Email, Team_num)                           ON Baseball.Users_info 
 -- -------------------------------------------------------------
 DROP USER IF EXISTS 'App_register'@'localhost';
 CREATE USER 'App_register'@'localhost' IDENTIFIED BY 'RegisterSecret';
-GRANT SELECT         ON Baseball.Teams              TO 'App_register'@'localhost';
-GRANT SELECT         ON Baseball.Roles              TO 'App_register'@'localhost';
-GRANT SELECT, INSERT ON Baseball.Users_info         TO 'App_register'@'localhost';
-GRANT SELECT, INSERT ON Baseball.Users_accounts     TO 'App_register'@'localhost';
-GRANT INSERT         ON Baseball.Player_statistics  TO 'App_register'@'localhost';
-
+GRANT SELECT         ON Baseball.Teams             TO 'App_register'@'localhost';
+GRANT SELECT         ON Baseball.Roles             TO 'App_register'@'localhost';
+GRANT SELECT, INSERT ON Baseball.Users_info        TO 'App_register'@'localhost';
+GRANT SELECT, INSERT ON Baseball.Users_accounts    TO 'App_register'@'localhost';
+GRANT INSERT         ON Baseball.Player_statistics TO 'App_register'@'localhost';
 
 -- -------------------------------------------------------------
 --  Observer  (Role_type = 1) — read-only + own password change
 -- -------------------------------------------------------------
 DROP USER IF EXISTS 'Observer'@'localhost';
 CREATE USER 'Observer'@'localhost' IDENTIFIED BY 'ObserverSecret';
-GRANT SELECT ON Baseball.Teams              TO 'Observer'@'localhost';
-GRANT SELECT ON Baseball.Users_info         TO 'Observer'@'localhost';
-GRANT SELECT ON Baseball.Player_statistics  TO 'Observer'@'localhost';
-GRANT SELECT ON Baseball.Games_statistics   TO 'Observer'@'localhost';
-GRANT SELECT ON Baseball.Games              TO 'Observer'@'localhost';
-GRANT SELECT ON Baseball.Roles              TO 'Observer'@'localhost';
-GRANT SELECT ON Baseball.Users_accounts     TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Teams             TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Users_info        TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Player_statistics TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Games_statistics  TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Games             TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Roles             TO 'Observer'@'localhost';
+GRANT SELECT ON Baseball.Users_accounts    TO 'Observer'@'localhost';
 GRANT UPDATE (Password) ON Baseball.Users_accounts TO 'Observer'@'localhost';
-
 
 -- -------------------------------------------------------------
 --  User  (Role_type = 2)
---  Can update Player_statistics totals and manage
---  Games_statistics rows — but only for their own team.
---  Row-level restriction enforced in the application layer.
 -- -------------------------------------------------------------
 DROP USER IF EXISTS 'User'@'localhost';
 CREATE USER 'User'@'localhost' IDENTIFIED BY 'UserSecret';
-GRANT SELECT ON Baseball.Teams              TO 'User'@'localhost';
-GRANT SELECT ON Baseball.Users_info         TO 'User'@'localhost';
-GRANT SELECT ON Baseball.Player_statistics  TO 'User'@'localhost';
-GRANT SELECT ON Baseball.Games_statistics   TO 'User'@'localhost';
-GRANT SELECT ON Baseball.Games              TO 'User'@'localhost';
-GRANT SELECT ON Baseball.Roles              TO 'User'@'localhost';
-GRANT SELECT ON Baseball.Users_accounts     TO 'User'@'localhost';
-GRANT UPDATE         ON Baseball.Player_statistics  TO 'User'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Games_statistics TO 'User'@'localhost';
-GRANT UPDATE (Password) ON Baseball.Users_accounts  TO 'User'@'localhost';
-
+GRANT SELECT ON Baseball.Teams             TO 'User'@'localhost';
+GRANT SELECT ON Baseball.Users_info        TO 'User'@'localhost';
+GRANT SELECT ON Baseball.Player_statistics TO 'User'@'localhost';
+GRANT SELECT ON Baseball.Games_statistics  TO 'User'@'localhost';
+GRANT SELECT ON Baseball.Games             TO 'User'@'localhost';
+GRANT SELECT ON Baseball.Roles             TO 'User'@'localhost';
+GRANT SELECT ON Baseball.Users_accounts    TO 'User'@'localhost';
+GRANT UPDATE                         ON Baseball.Player_statistics TO 'User'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Games_statistics  TO 'User'@'localhost';
+GRANT UPDATE (Password)              ON Baseball.Users_accounts    TO 'User'@'localhost';
+GRANT UPDATE (First_name, Last_name, Team_num) ON Baseball.Users_info TO 'User'@'localhost';
 
 -- -------------------------------------------------------------
 --  Manager  (Role_type = 3) — full access, no DDL
 -- -------------------------------------------------------------
 DROP USER IF EXISTS 'Manager'@'localhost';
 CREATE USER 'Manager'@'localhost' IDENTIFIED BY 'ManagerSecret';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Teams              TO 'Manager'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Users_info         TO 'Manager'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Player_statistics  TO 'Manager'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Games_statistics   TO 'Manager'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Games              TO 'Manager'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Roles              TO 'Manager'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Users_accounts     TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Teams             TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Users_info        TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Player_statistics TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Games_statistics  TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Games             TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Roles             TO 'Manager'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Users_accounts    TO 'Manager'@'localhost';
 
 
 FLUSH PRIVILEGES;

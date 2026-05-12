@@ -157,36 +157,33 @@
 <html>
   <head>
     <title>Register - Baseball League</title>
-    <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <h1 style = "text-align:center">Welcome to the Baseball League:</h1>
-    <?php Format("regbox", 2, 15, 100, "black", 2, "red", "gray", 68, 94); ?>
-    <div id = "regbox">
+    <?php Format("regbox", 2, 25, 150, "black", 2, "red", "gray", 50, 94); ?>
+    <div id = "regbox" style = "height: auto; padding: 10px 16px;">
       <h2 style = "color: tan;">Create an Account</h2>
       <?php if (!empty($errors)): ?>
-        <div style = "color: red; background: #ffe0e0; border: 1px solid red; padding: 5px; margin-bottom: 10px;">
-          <?php foreach ($errors as $e): ?>
-            <p style = "margin: 2px 0;"><?= htmlspecialchars($e) ?></p>
-          <?php endforeach; ?>
-        </div>
+        <?php foreach ($errors as $e): ?>
+          <p style = "color: red;"><?= htmlspecialchars($e) ?></p>
+        <?php endforeach; ?>
       <?php endif; ?>
       <form action = "register.php" method = "post">
         <table>
           <tr>
-            <td>First Name:</td>
+            <td style = "font-size: 110%">First Name:</td>
             <td><input type = "text" name = "first_name" value = "<?= htmlspecialchars($first) ?>" size = "25" maxlength = "30"/></td>
           </tr>
           <tr>
-            <td>Last Name:</td>
+            <td style = "font-size: 110%">Last Name:</td>
             <td><input type = "text" name = "last_name" value = "<?= htmlspecialchars($last) ?>" size = "25" maxlength = "30"/></td>
           </tr>
           <tr>
-            <td>Email:</td>
+            <td style = "font-size: 110%">Email:</td>
             <td><input type = "text" name = "email" value = "<?= htmlspecialchars($email) ?>" size = "25" maxlength = "50"/></td>
           </tr>
           <tr>
-            <td>Team:</td>
+            <td style = "font-size: 110%">Team:</td>
             <td>
               <select name = "team_id">
                 <option value = "">-- Select a team --</option>
@@ -199,15 +196,15 @@
             </td>
           </tr>
           <tr>
-            <td>Username:</td>
+            <td style = "font-size: 110%">Username:</td>
             <td><input type = "text" name = "username" value = "<?= htmlspecialchars($username) ?>" size = "25" maxlength = "50"/></td>
           </tr>
           <tr>
-            <td>Password:</td>
+            <td style = "font-size: 110%">Password:</td>
             <td><input type = "password" name = "password" size = "25" maxlength = "50"/></td>
           </tr>
           <tr>
-            <td>Confirm Password:</td>
+            <td style = "font-size: 110%">Confirm Password:</td>
             <td><input type = "password" name = "confirm_password" size = "25" maxlength = "50"/></td>
           </tr>
           <tr>
