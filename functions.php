@@ -77,10 +77,12 @@
                  ? htmlspecialchars($team_name)
                  : 'No Team';
 
-    // Management link — managers only
-    $management_link = ($role === 'manager')
-      ? "<a href='role_management_page.php'>Management</a>"
-      : '';
+    // Management link — managers only; coaches get "My Team" link
+    $management_link = '';
+    if ($role === 'manager')
+      $management_link = "<a href='role_management_page.php'>Management</a>";
+    elseif ($role === 'user')
+      $management_link = "<a href='role_management_page.php'>My Team</a>";
 
     echo "
       <div id='textb'>

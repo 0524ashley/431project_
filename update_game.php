@@ -242,8 +242,6 @@
 
         <h2>Manage Stats &mdash; Game #<?= $game_id ?></h2>
 
-        <a class = "back-link" href = "game_management_page.php">&larr; Back to Game Management</a>
-
         <!-- Game summary header -->
         <table class = "game-card" style = "width:96%; margin:6px auto 10px;">
           <tr class = "row-header">

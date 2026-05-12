@@ -121,6 +121,8 @@
       <div class = "form-wrap">
         <h2>Player Stats: <?= htmlspecialchars($player->fullName()) ?></h2>
 
+        <a class = "back-link" href = "role_management_page.php">&larr; Back to Management</a>
+
         <?php if ($flash): ?>
           <?php if (isset($_GET['gs_error'])): ?>
             <p class = "msg-err"><?= htmlspecialchars($flash) ?></p>
@@ -250,7 +252,7 @@
           </table>
         <?php endif; ?>
 
-        <a class = "back-link" href = "role_management_page.php">&larr; Back to Management</a>
+        
       </div>
     </div>
 

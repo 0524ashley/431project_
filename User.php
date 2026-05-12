@@ -8,9 +8,12 @@
 //    User::getAll($db)               returns User[]
 //    User::getById($db, $id)         returns User|null
 //    User::getByEmail($db, $email)   returns User|null
+//    User::getByTeamAndRole($db, $teamId, $roleType)  returns User[]
 //
+//    User::updateInfo($db, $id, $firstName, $lastName)
+//    User::updatePassword($db, $email, $plainPassword)
+//    User::updateTeamAssign($db, $id, $teamId)   — pass teamId=1 to unassign
 //    User::updateRole($db, $email, $roleType)
-//    User::updateTeam($db, $id, $teamId)
 //    User::delete($db, $id)
 //
 //  Instance getters:
@@ -135,6 +138,25 @@ class User
 
 
   // =============================================================
+  //  User::getByTeamAndRole($db, $teamId, $roleType)
+  //  Returns User[] filtered by team and role.
+  //  Used by coaches to load only their own team's players.
+  // =============================================================
+  public static function getByTeamAndRole(mysqli $db, int $teamId, int $roleType)
+    {
+    $stmt = $db->prepare(
+      self::baseQuery() .
+      "WHERE UI.Team_num = ? AND UA.Role_type = ?
+       ORDER BY UI.Last_name ASC, UI.First_name ASC"
+    );
+    if (!$stmt) return [];
+    $stmt->bind_param('ii', $teamId, $roleType);
+    $stmt->execute();
+    return self::bindAndFetch($stmt);
+    }
+
+
+  // =============================================================
   //  User::getById($db, $id)
   //  Returns a single User by ID_num, or null.
   // =============================================================
@@ -170,6 +192,50 @@ class User
 
 
   // =============================================================
+  //  User::updateInfo($db, $id, $firstName, $lastName)
+  //  Updates First_name and Last_name in Users_info.
+  //  Used by both manager and coach (coach: own team only,
+  //  enforced at application layer — see design notes).
+  //  Returns true on success.
+  // =============================================================
+  public static function updateInfo(mysqli $db, int $id, string $firstName, string $lastName)
+    {
+    $firstName = trim($firstName);
+    $lastName  = trim($lastName);
+    if ($firstName === '' || $lastName === '') return false;
+
+    $stmt = $db->prepare("
+      UPDATE Users_info SET First_name = ?, Last_name = ? WHERE ID_num = ?
+    ");
+    if (!$stmt) return false;
+    $stmt->bind_param('ssi', $firstName, $lastName, $id);
+    $ok = $stmt->execute();
+    $stmt->close();
+    return $ok;
+    }
+
+
+  // =============================================================
+  //  User::updatePassword($db, $email, $hashedPassword)
+  //  Updates Password in Users_accounts.
+  //  Caller must bcrypt the plaintext before passing it in.
+  //  Used by both manager and coach (coach: own team only).
+  //  Returns true on success.
+  // =============================================================
+  public static function updatePassword(mysqli $db, string $email, string $hashedPassword)
+    {
+    $stmt = $db->prepare("
+      UPDATE Users_accounts SET Password = ? WHERE User_email = ?
+    ");
+    if (!$stmt) return false;
+    $stmt->bind_param('ss', $hashedPassword, $email);
+    $ok = $stmt->execute();
+    $stmt->close();
+    return $ok;
+    }
+
+
+  // =============================================================
   //  User::updateRole($db, $email, $roleType)
   //  Updates Role_type in Users_accounts.
   //  Returns true on success.
@@ -188,11 +254,16 @@ class User
 
 
   // =============================================================
-  //  User::updateTeam($db, $id, $teamId)
-  //  Updates Team_num in Users_info.
+  //  User::updateTeamAssign($db, $id, $teamId)
+  //  Sets Team_num = $teamId for the given player.
+  //  Pass teamId = 1 to remove a player from their team (N/A).
+  //  Accessible by manager (any player) and coach (own team only,
+  //  enforced by the calling page).
+  //  DB-level: 'User' credential has UPDATE (Team_num) on
+  //  Users_info — row-scope is application-enforced.
   //  Returns true on success.
   // =============================================================
-  public static function updateTeam(mysqli $db, int $id, int $teamId)
+  public static function updateTeamAssign(mysqli $db, int $id, int $teamId)
     {
     $stmt = $db->prepare("
       UPDATE Users_info SET Team_num = ? WHERE ID_num = ?

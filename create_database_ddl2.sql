@@ -137,12 +137,15 @@ CREATE TABLE Users_accounts (
 
 INSERT INTO Users_accounts (User_email, Role_type, Username, Password) VALUES
     -- coaches / manager
-    ('coach.maimai@gmail.com',   2, 'maimai',       '$2y$10$u8Qn8yX5d7Tg3Lk9hP2rQeZ7sY4xF9aJ1Kz6LmN0pQrStUvWxYz12'),
-    ('joesmith@gmail.com',       3, 'joesmith',     '$2y$10$75fR8ojKgHHt4FxhsNAFCO15sgUDs4TLv6IsCt800VnKnB9P8ZaVy'),
-    ('coach.angels@gmail.com',   2, 'coachangels',  '$2y$08$fThT913LjhXwZAV/PKjlWO.mwUZ3Ur9gojyB/NcVquCtcVhjx502.'),
+    -- Observer:     username: bobross --- pwd: Password123!
+    -- Coach (user): username: maimai  --- pwd: Baseball2024
+    -- Manager:      username: joesmith -- pwd: TeamManager#1
+    ('coach.maimai@gmail.com',   2, 'maimai',       '$2b$08$tn42v/dye47sd3fV.33pbeyvzt32NDUlpuXGk2sjvIsXx6jpF1COG'),
+    ('joesmith@gmail.com',       3, 'joesmith',     '$2b$08$2ODi03QpvczF5J/MHm33uuSBrszgZb59/czQdfC3yLoPVRoiq5TFO'),
+    ('coach.angels@gmail.com',   2, 'coachangels',  '$2b$08$2ODi03QpvczF5J/MHm33uuSBrszgZb59/czQdfC3yLoPVRoiq5TF1'),
 
     -- ── Angels original players ────────────────────────────────
-    ('bobross@gmail.com',        1, 'bobross',       '$2y$08$YssQagi6/7COYT.S1zL43OyEBNXD/Ahp2C8hs/Km50OOfgHEHx/xe'),
+    ('bobross@gmail.com',        1, 'bobross',       '$2b$08$hltLZcIfDCZfh01ioK2ikeJPwMikqKMMhncm6qXAOOfz.qxD3.i8W'),
     ('sarah.johnson@gmail.com',  1, 'sarahjohnson',  '$2y$08$5Qlb4khzI6MbA7IcGryY.O/mmPdHANbjRDq5GeY.K2zHBFyOU6eea'),
     ('mike.davis@gmail.com',     1, 'mikedavis',     '$2y$08$vwlGgbp06vDOpugVJLPmAeUuAbn.7XZIXrHATXOIy.Y5NxEJOQAAS'),
 
@@ -477,6 +480,7 @@ GRANT SELECT ON Baseball.Users_accounts    TO 'User'@'localhost';
 GRANT UPDATE                         ON Baseball.Player_statistics TO 'User'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON Baseball.Games_statistics  TO 'User'@'localhost';
 GRANT UPDATE (Password)              ON Baseball.Users_accounts    TO 'User'@'localhost';
+GRANT UPDATE (First_name, Last_name, Team_num) ON Baseball.Users_info TO 'User'@'localhost';
 
 -- -------------------------------------------------------------
 --  Manager  (Role_type = 3) — full access, no DDL
