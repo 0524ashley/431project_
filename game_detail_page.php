@@ -109,143 +109,96 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <h1 style = "text-align:center;">Baseball League Statistics</h1>
+    <h1 class="page-title">Baseball League Statistics</h1>
     <?php Format("texta", 10, 8, 150, "black", 2, "black", "gray", 83, 89.6); ?>
 
-    <div id = "texta">
+    <div id="texta">
+
+      <a class="detail-back-link" href="game_page.php">&larr; Back to All Games</a>
+      <br />
 
       <!-- ============================================================
-           Game header card
+           Game header — detail box (no table)
            ============================================================ -->
-      <table class = "game-card" style = "width:96%; margin: 10px auto;">
-        <tr class = "row-header">
-          <td style = "width:40%; text-align:center;">Home Team</td>
-          <td class = "vs-cell">V.S.</td>
-          <td style = "width:40%; text-align:center;">Away Team</td>
-        </tr>
-        <tr class = "row-teams">
-          <td style = "text-align:center;">
-            <?= htmlspecialchars($game->home_team()) ?>
-          </td>
-          <td class = "vs-cell">&nbsp;</td>
-          <td style = "text-align:center;">
-            <?= htmlspecialchars($game->away_team()) ?>
-          </td>
-        </tr>
-        <tr class = "row-scores">
-          <td style = "text-align:center;"><?= $game->home_score() ?></td>
-          <td class = "vs-cell">&mdash;</td>
-          <td style = "text-align:center;"><?= $game->away_score() ?></td>
-        </tr>
-        <tr class = "row-meta">
-          <td colspan = "3">
-            <strong>Date:</strong>
-            <?= htmlspecialchars($game->game_date() ?: 'TBD') ?>
-            &nbsp;&nbsp;
-            <strong>Location:</strong>
-            <?= htmlspecialchars($game->location() ?: 'TBD') ?>
-          </td>
-        </tr>
-      </table>
-
-      <a href = "game_page.php" style = "display:inline-block; margin:6px 0 10px 0;">
-        &larr; Back to All Games
-      </a>
+      <div class="game-detail">
+        <strong>Game ID:</strong> <?= $game->game_id() ?><br>
+        <strong>Home Team:</strong>
+          <?= htmlspecialchars($game->home_team()) ?>
+          (ID&nbsp;<?= $game->home_team_id() ?>)
+          &mdash; Score: <?= $game->home_score() ?><br>
+        <strong>Away Team:</strong>
+          <?= htmlspecialchars($game->away_team()) ?>
+          (ID&nbsp;<?= $game->away_team_id() ?>)
+          &mdash; Score: <?= $game->away_score() ?><br>
+        <strong>Date:</strong> <?= htmlspecialchars($game->game_date() ?: 'TBD') ?><br>
+        <strong>Location:</strong> <?= htmlspecialchars($game->location() ?: 'TBD') ?>
+      </div>
 
       <!-- ============================================================
-           Player stats — two columns: Home | Away
+           Player stats — Home team
            ============================================================ -->
-      <table style = "width:96%; margin:0 auto; border-collapse:collapse;">
-        <tr style = "vertical-align:top;">
+      <h3 class="stats-team-heading">
+        <?= htmlspecialchars($game->home_team()) ?>
+        <span class="stats-team-id">
+          (<?= $home_goals ?> goal<?= $home_goals !== 1 ? 's' : '' ?>)
+        </span>
+      </h3>
 
-          <!-- HOME TEAM column -->
-          <td style = "width:50%; padding-right:8px;">
-            <h3 style = "color:tan; margin:6px 0;">
-              <?= htmlspecialchars($game->home_team()) ?>
-              <span style = "font-size:0.8em; color:lightgray;">
-                (<?= $home_goals ?> goal<?= $home_goals !== 1 ? 's' : '' ?>)
-              </span>
-            </h3>
+      <?php if (empty($home_stats)): ?>
+        <p class="no-stats"><em>No stats recorded for this team.</em></p>
+      <?php else: ?>
+        <table class="stats-inner-table">
+          <tr>
+            <th>Player</th>
+            <th>Goals</th>
+            <th>Assists</th>
+            <th>HR</th>
+            <th>Time</th>
+          </tr>
+          <?php foreach ($home_stats as $gs): ?>
+            <tr>
+              <td><?= htmlspecialchars($gs->playerName()) ?></td>
+              <td class="num"><?= $gs->goals() ?></td>
+              <td class="num"><?= $gs->assists() ?></td>
+              <td class="num"><?= $gs->homeRuns() ?></td>
+              <td class="num"><?= $gs->timeFormatted() ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </table>
+      <?php endif; ?>
 
-            <?php if (empty($home_stats)): ?>
-              <p style = "color:lightgray;"><em>No stats recorded for this team.</em></p>
-            <?php else: ?>
-              <table style = "border-collapse:collapse; background:blue; width:100%;">
-                <tr>
-                  <th style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Player</th>
-                  <th style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Goals</th>
-                  <th style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Assists</th>
-                  <th style = "border:3px solid darkorange; background:lightgreen; padding:4px;">HR</th>
-                  <th style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Time</th>
-                </tr>
-                <?php foreach ($home_stats as $gs): ?>
-                  <tr>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:4px;">
-                      <?= htmlspecialchars($gs->playerName()) ?>
-                    </td>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:4px; text-align:center;">
-                      <?= $gs->goals() ?>
-                    </td>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:4px; text-align:center;">
-                      <?= $gs->assists() ?>
-                    </td>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:4px; text-align:center;">
-                      <?= $gs->homeRuns() ?>
-                    </td>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:4px; text-align:center;">
-                      <?= $gs->timeFormatted() ?>
-                    </td>
-                  </tr>
-                <?php endforeach; ?>
-              </table>
-            <?php endif; ?>
-          </td>
+      <!-- ============================================================
+           Player stats — Away team
+           ============================================================ -->
+      <h3 class="stats-team-heading">
+        <?= htmlspecialchars($game->away_team()) ?>
+        <span class="stats-team-id">
+          (<?= $away_goals ?> goal<?= $away_goals !== 1 ? 's' : '' ?>)
+        </span>
+      </h3>
 
-          <!-- AWAY TEAM column -->
-          <td style = "width:50%; padding-left:8px;">
-            <h3 style = "color:tan; margin:6px 0;">
-              <?= htmlspecialchars($game->away_team()) ?>
-              <span style = "font-size:0.8em; color:lightgray;">
-                (<?= $away_goals ?> goal<?= $away_goals !== 1 ? 's' : '' ?>)
-              </span>
-            </h3>
-
-            <?php if (empty($away_stats)): ?>
-              <p style = "color:lightgray;"><em>No stats recorded for this team.</em></p>
-            <?php else: ?>
-              <table style = "border-collapse:collapse; background:blue; width:100%;">
-                <tr>
-                  <th style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Player</th>
-                  <th style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Goals</th>
-                  <th style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Assists</th>
-                  <th style = "border:3px solid darkorange; background:lightgreen; padding:4px;">HR</th>
-                  <th style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Time</th>
-                </tr>
-                <?php foreach ($away_stats as $gs): ?>
-                  <tr>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:4px;">
-                      <?= htmlspecialchars($gs->playerName()) ?>
-                    </td>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:4px; text-align:center;">
-                      <?= $gs->goals() ?>
-                    </td>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:4px; text-align:center;">
-                      <?= $gs->assists() ?>
-                    </td>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:4px; text-align:center;">
-                      <?= $gs->homeRuns() ?>
-                    </td>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:4px; text-align:center;">
-                      <?= $gs->timeFormatted() ?>
-                    </td>
-                  </tr>
-                <?php endforeach; ?>
-              </table>
-            <?php endif; ?>
-          </td>
-
-        </tr>
-      </table>
+      <?php if (empty($away_stats)): ?>
+        <p class="no-stats"><em>No stats recorded for this team.</em></p>
+      <?php else: ?>
+        <table class="stats-inner-table">
+          <tr>
+            <th>Player</th>
+            <th>Goals</th>
+            <th>Assists</th>
+            <th>HR</th>
+            <th>Time</th>
+          </tr>
+          <?php foreach ($away_stats as $gs): ?>
+            <tr>
+              <td><?= htmlspecialchars($gs->playerName()) ?></td>
+              <td class="num"><?= $gs->goals() ?></td>
+              <td class="num"><?= $gs->assists() ?></td>
+              <td class="num"><?= $gs->homeRuns() ?></td>
+              <td class="num"><?= $gs->timeFormatted() ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </table>
+      <?php endif; ?>
 
     </div>
 

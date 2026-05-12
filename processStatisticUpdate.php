@@ -3,20 +3,18 @@
 //  processStatisticUpdate.php
 //
 //  Adds or updates one player's stat row in Games_statistics
-//  for a specific game (composite PK: Game_ID + Player_ID),
-//  then immediately recomputes and overwrites that player's
-//  Player_statistics totals via SUM() across all their
-//  Games_statistics rows — so Player_statistics is always in
-//  sync and never needs to be edited manually.
+//  for a specific game, then automatically recomputes that
+//  player's Player_statistics career totals and the game score.
 //
 //  Access: manager (any player) OR user/coach (own team only).
 //
 //  Expects GET/POST:
 //    game_id   — ID of the game
 //    player_id — ID of the player
+//    back      — 'update_game' | 'detail' | (default: player_stats)
 //
-//  On POST with 'save_game_stat' button:
-//    goals, assists, home_runs, time_mins, time_secs
+//  On POST with 'save_game_stat':
+//    goals, assists, homeruns, mins, secs
 // =============================================================
 
   if (session_status() === PHP_SESSION_NONE)
@@ -44,6 +42,8 @@
 
   $game_id   = (int)($_REQUEST['game_id']   ?? 0);
   $player_id = (int)($_REQUEST['player_id'] ?? 0);
+  $back_raw  = $_REQUEST['back'] ?? '';
+  $back      = in_array($back_raw, ['update_game', 'detail']) ? $back_raw : 'player_stats';
 
   if ($game_id <= 0 || $player_id <= 0)
     {
@@ -62,7 +62,7 @@
   $success = '';
 
   // ------------------------------------------------------------------
-  // Fetch logged-in user's display info for the menu
+  // Menu display info
   // ------------------------------------------------------------------
   $menu_display_name = $_SESSION['username'] ?? 'User';
   $menu_team_name    = '';
@@ -75,7 +75,7 @@
     }
 
   // ------------------------------------------------------------------
-  // Load game and target player
+  // Load game and player
   // ------------------------------------------------------------------
   $game   = Game::getById($db, $game_id);
   $player = User::getById($db, $player_id);
@@ -87,7 +87,7 @@
     exit;
     }
 
-  // Coaches may only edit stats for their own team
+  // Coaches may only edit stats for players on their own team
   if ($role === 'user' && $player->teamId() !== (int)($_SESSION['team_id'] ?? 0))
     {
     $db->close();
@@ -95,11 +95,11 @@
     exit;
     }
 
-  // Load existing row for pre-fill (null = new entry)
+  // Load existing row (null = new entry; form pre-fills zeros)
   $stat = GameStatistic::getByGameAndPlayer($db, $game_id, $player_id);
 
   // ------------------------------------------------------------------
-  // Handle POST — upsert game stat, then recompute career totals
+  // Handle POST — upsert then recompute
   // ------------------------------------------------------------------
   if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_game_stat']))
     {
@@ -113,55 +113,18 @@
 
     if (GameStatistic::upsert($db, $game_id, $player_id, $data))
       {
-      // ----------------------------------------------------------------
-      // Recompute Player_statistics from scratch using SUM() over all
-      // of this player's Games_statistics rows.
-      //
-      // Time arithmetic: sum everything into raw seconds, then split
-      // back into normalised mins (FLOOR / 60) and secs (MOD 60).
-      // ----------------------------------------------------------------
-      $sync = $db->prepare("
-        UPDATE Player_statistics
-        SET    Total_goals              = (
-                 SELECT COALESCE(SUM(Goals), 0)
-                 FROM   Games_statistics WHERE Player_ID = ?
-               ),
-               Total_assists            = (
-                 SELECT COALESCE(SUM(Assists), 0)
-                 FROM   Games_statistics WHERE Player_ID = ?
-               ),
-               Total_home_runs          = (
-                 SELECT COALESCE(SUM(Home_runs), 0)
-                 FROM   Games_statistics WHERE Player_ID = ?
-               ),
-               Total_time_on_field_mins = (
-                 SELECT FLOOR(
-                   COALESCE(SUM(Time_on_field_mins * 60 + Time_on_field_secs), 0) / 60
-                 )
-                 FROM   Games_statistics WHERE Player_ID = ?
-               ),
-               Total_time_on_field_secs = (
-                 SELECT MOD(
-                   COALESCE(SUM(Time_on_field_mins * 60 + Time_on_field_secs), 0), 60
-                 )
-                 FROM   Games_statistics WHERE Player_ID = ?
-               )
-        WHERE  Player_ID = ?
-      ");
+      GameStatistic::recomputePlayerTotals($db, $player_id);
+      GameStatistic::recomputeGameScore($db, $game_id);
 
-      if ($sync)
-        {
-        $sync->bind_param('iiiiii',
-          $player_id, $player_id, $player_id,
-          $player_id, $player_id, $player_id
-        );
-        $sync->execute();
-        $sync->close();
-        }
+      // Redirect back to the calling page
+      $db->close();
+      if ($back === 'update_game')
+        { header("Location: update_game.php?id={$game_id}&gs_saved=1"); exit; }
+      if ($back === 'detail')
+        { header("Location: game_detail_page.php?id={$game_id}&gs_saved=1"); exit; }
 
-      $success = "Game stats saved and career totals updated for "
-               . htmlspecialchars($player->fullName()) . ".";
-      $stat    = GameStatistic::getByGameAndPlayer($db, $game_id, $player_id);
+      header("Location: update_statistic.php?id={$player_id}&gs_saved=1");
+      exit;
       }
     else
       {
@@ -171,12 +134,19 @@
 
   $db->close();
 
-  // Pre-fill display values
+  // Pre-fill values
   $cur_goals    = $stat ? $stat->goals()    : 0;
   $cur_assists  = $stat ? $stat->assists()  : 0;
   $cur_homeruns = $stat ? $stat->homeRuns() : 0;
   $cur_mins     = $stat ? $stat->timeMins() : 0;
   $cur_secs     = $stat ? $stat->timeSecs() : 0;
+
+  // Back-link target
+  $back_href = match($back) {
+    'update_game' => "update_game.php?id={$game_id}",
+    'detail'      => "game_detail_page.php?id={$game_id}",
+    default       => "update_statistic.php?id={$player_id}",
+  };
 ?>
 <!DOCTYPE html>
 <html>
@@ -185,15 +155,14 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <h1 style = "text-align:center;">Baseball League Statistics</h1>
+    <h1 class = "page-title">Baseball League Statistics</h1>
     <?php Format("texta", 10, 8, 150, "black", 2, "black", "gray", 83, 89.6); ?>
 
     <div id = "texta">
       <div class = "form-wrap">
-        <h2>
-          Game Stats &mdash; <?= htmlspecialchars($player->fullName()) ?>
-        </h2>
-        <p style = "color:tan; margin:0 0 10px 0;">
+        <h2>Game Stats &mdash; <?= htmlspecialchars($player->fullName()) ?></h2>
+
+        <p class = "game-subtitle">
           Game #<?= $game_id ?>:
           <?= htmlspecialchars($game->home_team()) ?>
           vs
@@ -209,48 +178,38 @@
         <?php endif; ?>
 
         <form method = "post"
-              action = "processStatisticUpdate.php?game_id=<?= $game_id ?>&player_id=<?= $player_id ?>">
-          <table style = "border-collapse:collapse; background:blue;">
+              action = "processStatisticUpdate.php?game_id=<?= $game_id ?>&player_id=<?= $player_id ?>&back=<?= $back ?>">
+          <table class = "stat-table">
             <tr>
-              <th style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Field</th>
-              <th style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Value</th>
+              <th>Field</th>
+              <th>Value</th>
             </tr>
             <tr>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Goals</td>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                <input type = "number" name = "goals" min = "0" value = "<?= $cur_goals ?>"/>
-              </td>
+              <td>Goals</td>
+              <td><input type = "number" name = "goals"    min = "0" value = "<?= $cur_goals    ?>"/></td>
             </tr>
             <tr>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Assists</td>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                <input type = "number" name = "assists" min = "0" value = "<?= $cur_assists ?>"/>
-              </td>
+              <td>Assists</td>
+              <td><input type = "number" name = "assists"  min = "0" value = "<?= $cur_assists  ?>"/></td>
             </tr>
             <tr>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Home Runs</td>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                <input type = "number" name = "homeruns" min = "0" value = "<?= $cur_homeruns ?>"/>
-              </td>
+              <td>Home Runs</td>
+              <td><input type = "number" name = "homeruns" min = "0" value = "<?= $cur_homeruns ?>"/></td>
             </tr>
             <tr>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Time (mins)</td>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                <input type = "number" name = "mins" min = "0" value = "<?= $cur_mins ?>"/>
-              </td>
+              <td>Time (mins)</td>
+              <td><input type = "number" name = "mins"     min = "0" value = "<?= $cur_mins     ?>"/></td>
             </tr>
             <tr>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Time (secs)</td>
-              <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                <input type = "number" name = "secs" min = "0" max = "59" value = "<?= $cur_secs ?>"/>
-              </td>
+              <td>Time (secs)</td>
+              <td><input type = "number" name = "secs"     min = "0" max = "59" value = "<?= $cur_secs ?>"/></td>
             </tr>
           </table>
           <br/>
           <button type = "submit" name = "save_game_stat" class = "btn-save">Save Game Stats</button>
         </form>
 
-        <a class = "back-link" href = "update_statistic.php?id=<?= $player_id ?>">&larr; Back to Player Stats</a>
+        <a class = "back-link" href = "<?= htmlspecialchars($back_href) ?>">&larr; Back</a>
       </div>
     </div>
 

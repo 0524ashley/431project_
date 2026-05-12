@@ -178,8 +178,8 @@
              ====================================================== -->
         <h3 style = "color:tan; margin-top:24px;">Per-Game Stats</h3>
 
-        <!-- Dropdown to add/edit a game-stat row -->
-        <?php if (!empty($all_games)): ?>
+        <!-- Dropdown to add/edit a game-stat row — managers only -->
+        <?php if ($role === 'manager' && !empty($all_games)): ?>
           <div style = "margin-bottom:12px;">
             <form method = "get" action = "processStatisticUpdate.php" style = "display:inline;">
               <input type = "hidden" name = "player_id" value = "<?= $player_id ?>"/>

@@ -2,19 +2,14 @@
 // =============================================================
 //  update_game.php
 //
-//  Manage per-player statistics for a specific game (manager only).
-//  Score is never entered manually — it is always recalculated
-//  automatically as SUM(Goals) per team after any stat change.
+//  Manager-only page for editing a game's player statistics.
+//  Game info (teams, date, location, score) is shown read-only
+//  using the game-row card layout.
+//  Score is always derived from SUM(Goals) — never edited here.
 //
-//  Displays all existing Games_statistics rows for this game
-//  (players split by team), with inline edit forms for each row.
-//  A separate "Add Player Stat" form lets the manager add a new
-//  player to the game.
-//
-//  On every save or delete:
-//    1. GameStatistic::upsert() / GameStatistic::delete()
-//    2. GameStatistic::recomputePlayerTotals($db, $playerId)
-//    3. GameStatistic::recomputeGameScore($db, $gameId)
+//  All stat edits and deletions are handled inline via POST;
+//  recomputePlayerTotals() and recomputeGameScore() run after
+//  every change.
 //
 //  Expects GET:
 //    id — Game_ID to manage
@@ -60,7 +55,7 @@
   $success = '';
 
   // ------------------------------------------------------------------
-  // Fetch logged-in manager's display info for the menu
+  // Menu display info
   // ------------------------------------------------------------------
   $menu_display_name = $_SESSION['username'] ?? 'User';
   $menu_team_name    = '';
@@ -68,7 +63,7 @@
   $me = $db->prepare("
     SELECT UI.First_name, UI.Last_name, T.Name
     FROM   Users_info AS UI
-    JOIN   Teams      AS T ON T.ID = UI.Team_num
+    LEFT JOIN Teams   AS T ON T.ID = UI.Team_num
     WHERE  UI.Email = ?
   ");
   if ($me)
@@ -85,7 +80,7 @@
     }
 
   // ------------------------------------------------------------------
-  // Load the game
+  // Load game
   // ------------------------------------------------------------------
   $game = Game::getById($db, $game_id);
   if ($game === null)
@@ -110,14 +105,12 @@
         'time_mins' => (int)($_POST['mins']     ?? 0),
         'time_secs' => (int)($_POST['secs']     ?? 0),
       ];
-
       if (GameStatistic::upsert($db, $game_id, $pid, $data))
         {
         GameStatistic::recomputePlayerTotals($db, $pid);
         GameStatistic::recomputeGameScore($db, $game_id);
         $success = "Stats updated and score recalculated.";
-        // Reload game to reflect new score
-        $game = Game::getById($db, $game_id);
+        $game    = Game::getById($db, $game_id);
         }
       else
         {
@@ -127,7 +120,7 @@
     }
 
   // ------------------------------------------------------------------
-  // Handle POST — add a new player stat row
+  // Handle POST — add new player stat row
   // ------------------------------------------------------------------
   if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_stat']))
     {
@@ -141,13 +134,12 @@
         'time_mins' => (int)($_POST['new_mins']     ?? 0),
         'time_secs' => (int)($_POST['new_secs']     ?? 0),
       ];
-
       if (GameStatistic::upsert($db, $game_id, $pid, $data))
         {
         GameStatistic::recomputePlayerTotals($db, $pid);
         GameStatistic::recomputeGameScore($db, $game_id);
         $success = "Player stat added and score recalculated.";
-        $game = Game::getById($db, $game_id);
+        $game    = Game::getById($db, $game_id);
         }
       else
         {
@@ -161,7 +153,7 @@
     }
 
   // ------------------------------------------------------------------
-  // Handle POST — delete a player stat row
+  // Handle POST — delete player stat row
   // ------------------------------------------------------------------
   if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_stat']))
     {
@@ -173,7 +165,7 @@
         GameStatistic::recomputePlayerTotals($db, $pid);
         GameStatistic::recomputeGameScore($db, $game_id);
         $success = "Stat removed and score recalculated.";
-        $game = Game::getById($db, $game_id);
+        $game    = Game::getById($db, $game_id);
         }
       else
         {
@@ -183,95 +175,130 @@
     }
 
   // ------------------------------------------------------------------
-  // Load all current stat rows for this game (enriched with names)
+  // Load all current stat rows (enriched with name/team info)
   // ------------------------------------------------------------------
   $all_stats = GameStatistic::getByGame($db, $game_id);
 
   // Split by team
   $home_stats = [];
   $away_stats = [];
-  foreach ($all_stats as $gs)
+  foreach ($all_stats as $r)
     {
-    if ($gs->playerTeamId() === $game->home_team_id())      $home_stats[] = $gs;
-    elseif ($gs->playerTeamId() === $game->away_team_id())  $away_stats[] = $gs;
+    if ($r->playerTeamId() === $game->home_team_id())
+      $home_stats[] = $r;
+    elseif ($r->playerTeamId() === $game->away_team_id())
+      $away_stats[] = $r;
     }
 
-  // Players already in the game (for exclusion from "add" dropdown)
-  $existing_player_ids = array_map(fn($gs) => $gs->player_id(), $all_stats);
-
-  // Eligible players: members of either participating team, role 1 or 2
+  // Players eligible to be added (role 1, not already in game)
+  $existing_ids   = array_column($all_stats, 'player_id');
   $eligible_players = [];
   $ep_stmt = $db->prepare("
-    SELECT UI.ID_num, UI.First_name, UI.Last_name, UI.Team_num, T.Name AS team_name
-    FROM   Users_info     AS UI
-    JOIN   Users_accounts AS UA ON UA.User_email = UI.Email
-    JOIN   Teams          AS T  ON T.ID = UI.Team_num
-    WHERE  UI.Team_num IN (?, ?)
-      AND  UA.Role_type IN (1, 2)
-    ORDER BY UI.Team_num ASC, UI.Last_name ASC, UI.First_name ASC
+    SELECT  UI.ID_num, UI.First_name, UI.Last_name,
+            UI.Team_num, T.Name AS team_name
+    FROM    Users_info     AS UI
+    JOIN    Users_accounts AS UA ON UA.User_email = UI.Email
+    JOIN    Teams          AS T  ON T.ID          = UI.Team_num
+    WHERE   UA.Role_type = 1
+      AND   UI.Team_num IN (?, ?)
+    ORDER BY T.ID ASC, UI.Last_name ASC
   ");
   if ($ep_stmt)
     {
-    $htid = $game->home_team_id();
-    $atid = $game->away_team_id();
-    $ep_stmt->bind_param('ii', $htid, $atid);
+    $ep_stmt->bind_param('ii', $game->home_team_id(), $game->away_team_id());
     $ep_stmt->execute();
-    $ep_result = $ep_stmt->get_result();
-    while ($row = $ep_result->fetch_assoc())
+    $ep_stmt->bind_result($ep_id, $ep_first, $ep_last, $ep_team_num, $ep_team_name);
+    $ep_stmt->store_result();
+    while ($ep_stmt->fetch())
       {
-      if (!in_array((int)$row['ID_num'], $existing_player_ids))
-        $eligible_players[] = $row;
+      if (!in_array((int)$ep_id, $existing_ids))
+        $eligible_players[] = [
+          'ID_num'    => (int)$ep_id,
+          'First_name' => $ep_first,
+          'Last_name'  => $ep_last,
+          'Team_num'   => (int)$ep_team_num,
+          'team_name'  => $ep_team_name,
+        ];
       }
     $ep_stmt->close();
     }
 
   $db->close();
+
+  // ------------------------------------------------------------------
+  // Helper: render one team's inline-edit stat cards
+  // ------------------------------------------------------------------
+  function renderTeamStats(array $team_rows, string $team_label, int $game_id)
+    {
+    echo "<h3 class='subsection-heading'>" . htmlspecialchars($team_label) . "</h3>";
+
+    if (empty($team_rows))
+      {
+      echo "<p class='muted-note'><em>No stats recorded for this team yet.</em></p>";
+      return;
+      }
+
+    foreach ($team_rows as $r):
+      $pid = (int)$r->playerId();
+      ?>
+      <div class = "stat-card-wrap">
+        <form method = "post" action = "update_game.php?id=<?= $game_id ?>">
+          <input type = "hidden" name = "player_id" value = "<?= $pid ?>"/>
+          <table class = "stat-table">
+            <tr>
+              <th colspan = "2"><?= htmlspecialchars($r->playerName()) ?></th>
+            </tr>
+            <tr>
+              <td>Goals</td>
+              <td><input type = "number" name = "goals"    min = "0" value = "<?= $r->goals()    ?>"/></td>
+            </tr>
+            <tr>
+              <td>Assists</td>
+              <td><input type = "number" name = "assists"  min = "0" value = "<?= $r->assists()  ?>"/></td>
+            </tr>
+            <tr>
+              <td>Home Runs</td>
+              <td><input type = "number" name = "homeruns" min = "0" value = "<?= $r->homeRuns()?>"/></td>
+            </tr>
+            <tr>
+              <td>Mins</td>
+              <td><input type = "number" name = "mins"     min = "0" value = "<?= $r->timeMins()?>"/></td>
+            </tr>
+            <tr>
+              <td>Secs</td>
+              <td><input type = "number" name = "secs"     min = "0" max = "59" value = "<?= $r->timeSecs()?>"/></td>
+            </tr>
+            <tr>
+              <td colspan = "2" class = "stat-num">
+                <button type = "submit" name = "save_stat"   class = "btn-save-sm">Save</button>
+                <button type = "submit" name = "delete_stat" class = "btn-delete-sm"
+                        onclick = "return confirm('Remove <?= htmlspecialchars(addslashes($r->playerName())) ?> from this game?');">
+                  Remove
+                </button>
+              </td>
+            </tr>
+          </table>
+        </form>
+      </div>
+      <?php
+    endforeach;
+    }
 ?>
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Manage Game Stats - Baseball League</title>
+    <title>Modify Game Stats - Baseball League</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <h1 style = "text-align:center;">Baseball League Statistics</h1>
+    <h1 class = "page-title">Baseball League Statistics</h1>
     <?php Format("texta", 10, 8, 150, "black", 2, "black", "gray", 83, 89.6); ?>
 
     <div id = "texta">
       <div class = "form-wrap">
+        <h2>Modify Game #<?= $game_id ?> Stats</h2>
 
-        <h2>Manage Stats &mdash; Game #<?= $game_id ?></h2>
-
-        <!-- Game summary header -->
-        <table class = "game-card" style = "width:96%; margin:6px auto 10px;">
-          <tr class = "row-header">
-            <td style = "width:40%; text-align:center;">Home Team</td>
-            <td class = "vs-cell">V.S.</td>
-            <td style = "width:40%; text-align:center;">Away Team</td>
-          </tr>
-          <tr class = "row-teams">
-            <td style = "text-align:center;"><?= htmlspecialchars($game->home_team()) ?></td>
-            <td class = "vs-cell">&nbsp;</td>
-            <td style = "text-align:center;"><?= htmlspecialchars($game->away_team()) ?></td>
-          </tr>
-          <tr class = "row-scores">
-            <td style = "text-align:center;"><?= $game->home_score() ?></td>
-            <td class = "vs-cell">&mdash;</td>
-            <td style = "text-align:center;"><?= $game->away_score() ?></td>
-          </tr>
-          <tr class = "row-meta">
-            <td colspan = "3">
-              <strong>Date:</strong> <?= htmlspecialchars($game->game_date() ?: 'TBD') ?>
-              &nbsp;&nbsp;
-              <strong>Location:</strong> <?= htmlspecialchars($game->location() ?: 'TBD') ?>
-            </td>
-          </tr>
-          <tr class = "row-meta">
-            <td colspan = "3" style = "color:lightgray; font-size:0.85em;">
-              Score is calculated automatically from player goals.
-            </td>
-          </tr>
-        </table>
+        <a class = "back-link" href = "game_management_page.php">&larr; Back to Game Management</a>
 
         <?php if ($success): ?>
           <p class = "msg-ok"><?= htmlspecialchars($success) ?></p>
@@ -280,100 +307,61 @@
           <p class = "msg-err"><?= htmlspecialchars($error) ?></p>
         <?php endif; ?>
 
-        <!-- ===========================================================
-             Existing player stat rows, editable inline
-             =========================================================== -->
-        <?php
-          // Helper to render one team's editable stat table
-          function renderTeamStats($team_name, $stats, $game_id)
-            {
-            echo '<h3 style="color:tan; margin:14px 0 6px;">' . htmlspecialchars($team_name) . '</h3>';
-            if (empty($stats))
-              {
-              echo '<p style="color:lightgray;"><em>No stats recorded for this team yet.</em></p>';
-              return;
-              }
+        <!-- Read-only game info using the shared game-row card -->
+        <table class = "game-row">
+          <tr class = "game-row-header">
+            <td colspan = "2">Game #<?= $game_id ?></td>
+          </tr>
+          <tr>
+            <td class = "game-row-label">Home Team</td>
+            <td><?= htmlspecialchars($game->home_team()) ?></td>
+          </tr>
+          <tr>
+            <td class = "game-row-label">Away Team</td>
+            <td><?= htmlspecialchars($game->away_team()) ?></td>
+          </tr>
+          <tr>
+            <td class = "game-row-label">Date</td>
+            <td><?= htmlspecialchars($game->game_date() ?: 'TBD') ?></td>
+          </tr>
+          <tr>
+            <td class = "game-row-label">Location</td>
+            <td><?= htmlspecialchars($game->location() ?: 'TBD') ?></td>
+          </tr>
+          <tr>
+            <td class = "game-row-label">Home Score</td>
+            <td class = "game-row-score"><?= $game->home_score() ?></td>
+          </tr>
+          <tr>
+            <td class = "game-row-label">Away Score</td>
+            <td class = "game-row-score"><?= $game->away_score() ?></td>
+          </tr>
+          <tr class = "game-row-note">
+            <td colspan = "2">Score is calculated automatically from player goals</td>
+          </tr>
+        </table>
 
-            foreach ($stats as $gs):
-            ?>
-              <form method = "post" action = "update_game.php?id=<?= $game_id ?>"
-                    style = "display:inline-block; vertical-align:top; margin:0 6px 10px 0;">
-                <input type = "hidden" name = "player_id" value = "<?= $gs->player_id() ?>"/>
-                <table style = "border-collapse:collapse; background:blue;">
-                  <tr>
-                    <th colspan = "2" style = "border:3px solid darkorange; background:lightgreen; padding:4px;">
-                      <?= htmlspecialchars($gs->playerName()) ?>
-                    </th>
-                  </tr>
-                  <tr>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:3px;">Goals</td>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:3px;">
-                      <input type = "number" name = "goals" min = "0"
-                             value = "<?= $gs->goals() ?>" style = "width:60px;"/>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:3px;">Assists</td>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:3px;">
-                      <input type = "number" name = "assists" min = "0"
-                             value = "<?= $gs->assists() ?>" style = "width:60px;"/>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:3px;">Home Runs</td>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:3px;">
-                      <input type = "number" name = "homeruns" min = "0"
-                             value = "<?= $gs->homeRuns() ?>" style = "width:60px;"/>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:3px;">Mins</td>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:3px;">
-                      <input type = "number" name = "mins" min = "0"
-                             value = "<?= $gs->timeMins() ?>" style = "width:60px;"/>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:3px;">Secs</td>
-                    <td style = "border:3px solid darkorange; background:lightgreen; padding:3px;">
-                      <input type = "number" name = "secs" min = "0" max = "59"
-                             value = "<?= $gs->timeSecs() ?>" style = "width:60px;"/>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td colspan = "2" style = "border:3px solid darkorange; background:lightgreen; padding:4px; text-align:center;">
-                      <button type = "submit" name = "save_stat" class = "btn-save"
-                              style = "padding:2px 8px; margin-right:4px;">Save</button>
-                      <button type = "submit" name = "delete_stat" class = "btn-delete"
-                              style = "padding:2px 8px;"
-                              onclick = "return confirm('Remove <?= htmlspecialchars(addslashes($gs->playerName())) ?> from this game?');">
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                </table>
-              </form>
-            <?php
-            endforeach;
-            }
+        <p class = "hint-text">
+          Edit or remove player stats below. The score updates automatically when goals change.
+        </p>
 
-          renderTeamStats($game->home_team(), $home_stats, $game_id);
-          renderTeamStats($game->away_team(), $away_stats,  $game_id);
-        ?>
+        <!-- Home team stat cards -->
+        <?php renderTeamStats($home_stats, 'Home — ' . $game->home_team(), $game_id); ?>
 
-        <!-- ===========================================================
-             Add a new player to this game
-             =========================================================== -->
-        <h3 style = "color:tan; margin:18px 0 6px;">Add Player to Game</h3>
+        <!-- Away team stat cards -->
+        <?php renderTeamStats($away_stats, 'Away — ' . $game->away_team(), $game_id); ?>
+
+        <!-- Add a new player to this game -->
+        <h3 class = "subsection-heading-lg">Add Player to Game</h3>
 
         <?php if (empty($eligible_players)): ?>
-          <p style = "color:lightgray;"><em>All eligible players for both teams are already in this game.</em></p>
+          <p class = "muted-note"><em>All eligible players for both teams are already in this game.</em></p>
         <?php else: ?>
           <form method = "post" action = "update_game.php?id=<?= $game_id ?>">
-            <table style = "border-collapse:collapse; background:blue;">
+            <table class = "stat-table">
               <tr>
-                <th style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Player</th>
-                <th style = "border:3px solid darkorange; background:lightgreen; padding:4px;">
+                <th>Player</th>
+                <th>
                   <select name = "new_player_id">
                     <option value = "">-- Select Player --</option>
                     <?php
@@ -385,7 +373,7 @@
                           $cur_team = $ep['Team_num'];
                         endif;
                     ?>
-                        <option value = "<?= (int)$ep['ID_num'] ?>">
+                        <option value = "<?= $ep['ID_num'] ?>">
                           <?= htmlspecialchars($ep['First_name'] . ' ' . $ep['Last_name']) ?>
                         </option>
                     <?php
@@ -396,37 +384,27 @@
                 </th>
               </tr>
               <tr>
-                <td style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Goals</td>
-                <td style = "border:3px solid darkorange; background:lightgreen; padding:4px;">
-                  <input type = "number" name = "new_goals" min = "0" value = "0" style = "width:60px;"/>
-                </td>
+                <td>Goals</td>
+                <td><input type = "number" name = "new_goals"    min = "0" value = "0"/></td>
               </tr>
               <tr>
-                <td style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Assists</td>
-                <td style = "border:3px solid darkorange; background:lightgreen; padding:4px;">
-                  <input type = "number" name = "new_assists" min = "0" value = "0" style = "width:60px;"/>
-                </td>
+                <td>Assists</td>
+                <td><input type = "number" name = "new_assists"  min = "0" value = "0"/></td>
               </tr>
               <tr>
-                <td style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Home Runs</td>
-                <td style = "border:3px solid darkorange; background:lightgreen; padding:4px;">
-                  <input type = "number" name = "new_homeruns" min = "0" value = "0" style = "width:60px;"/>
-                </td>
+                <td>Home Runs</td>
+                <td><input type = "number" name = "new_homeruns" min = "0" value = "0"/></td>
               </tr>
               <tr>
-                <td style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Mins</td>
-                <td style = "border:3px solid darkorange; background:lightgreen; padding:4px;">
-                  <input type = "number" name = "new_mins" min = "0" value = "0" style = "width:60px;"/>
-                </td>
+                <td>Mins</td>
+                <td><input type = "number" name = "new_mins"     min = "0" value = "0"/></td>
               </tr>
               <tr>
-                <td style = "border:3px solid darkorange; background:lightgreen; padding:4px;">Secs</td>
-                <td style = "border:3px solid darkorange; background:lightgreen; padding:4px;">
-                  <input type = "number" name = "new_secs" min = "0" max = "59" value = "0" style = "width:60px;"/>
-                </td>
+                <td>Secs</td>
+                <td><input type = "number" name = "new_secs"     min = "0" max = "59" value = "0"/></td>
               </tr>
               <tr>
-                <td colspan = "2" style = "border:3px solid darkorange; background:lightgreen; padding:4px; text-align:center;">
+                <td colspan = "2" class = "stat-num">
                   <button type = "submit" name = "add_stat" class = "btn-save">Add to Game</button>
                 </td>
               </tr>
@@ -434,23 +412,18 @@
           </form>
         <?php endif; ?>
 
+
       </div>
     </div>
 
     <?php
       $button = $_POST['button'] ?? '';
       if ($button == "Open Menu")
-        {
         MenuOpen(1, $menu_display_name, $menu_team_name, $_SESSION['role'] ?? '');
-        }
       elseif ($button == "Close Menu")
-        {
         MenuOpen(0, $menu_display_name, $menu_team_name, $_SESSION['role'] ?? '');
-        }
       else
-        {
         MenuOpen(0, $menu_display_name, $menu_team_name, $_SESSION['role'] ?? '');
-        }
     ?>
   </body>
 </html>

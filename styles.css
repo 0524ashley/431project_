@@ -12,7 +12,13 @@
   padding-right: 8px;
 }
 
-/* ========== MENU (Functions.php) ========== */
+/* ========== MENU TOGGLE BUTTON (functions.php) ========== */
+#textbb input[type=submit] {
+  width: 100%;
+  height: 100%;
+}
+
+/* ========== MENU (functions.php) ========== */
 #textb a {
   color: purple;
   text-decoration: none;
@@ -50,6 +56,17 @@
 #game_window {
   overflow-y: scroll;
   height: 75%;
+}
+
+/* ========== PAGE HEADINGS ========== */
+h1.page-title {
+  text-align: center;
+}
+
+h2.section-title {
+  text-align: center;
+  color: tan;
+  margin-top: 4px;
 }
 
 /* ========== FORM LAYOUT ========== */
@@ -131,14 +148,73 @@
   margin-bottom: 6px;
 }
 
-/* ========== GAMING PAGE SPECIFIC ========== */
+.team-table {
+  border-collapse: collapse;
+  background: blue;
+}
+
+.no-players {
+  color: lightgray;
+  font-style: italic;
+}
+
+/* ========== GAME PAGE — TRADITIONAL TABLE LAYOUT ========== */
+.games-table {
+  border-collapse: collapse;
+  width: 100%;
+  background: blue;
+}
+
+.games-table th {
+  background: blue;
+  color: lightgreen;
+  font-weight: bold;
+  font-size: 1.0em;
+  text-align: center;
+  border: 3px solid darkorange;
+  padding: 6px 10px;
+}
+
+.games-table td {
+  background: lightgreen;
+  color: black;
+  border: 3px solid darkorange;
+  padding: 6px 10px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.games-table td.col-id {
+  font-weight: bold;
+  width: 50px;
+}
+
+.games-table td.col-score {
+  font-size: 1.1em;
+  font-weight: bold;
+}
+
+.games-table td.col-date,
+.games-table td.col-location {
+  text-align: left;
+  font-size: 0.93em;
+}
+
+.games-table td.col-action {
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ========== GAME CARD (kept for game_detail_page / update_game) ========== */
 .game-card {
   border: 4px solid darkorange;
   background: lightgreen;
   color: black;
   margin-bottom: 14px;
   border-collapse: collapse;
-  width: 100%;
+  width: 96%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .game-card td {
@@ -149,7 +225,7 @@
   vertical-align: middle;
 }
 
-.row-header td {
+.game-card .row-header td {
   background: blue;
   color: lightgreen;
   font-weight: bold;
@@ -157,13 +233,14 @@
   font-size: 1.05em;
   border: 2px solid darkorange;
   padding: 5px 12px;
+  width: 40%;
 }
 
 .vs-cell {
   text-align: center;
   font-weight: bold;
   font-size: 1.1em;
-  width: 60px;
+  width: 60px !important;
 }
 
 .row-teams td {
@@ -181,6 +258,119 @@
 .row-meta td {
   text-align: left;
   font-size: 0.95em;
+}
+
+.row-meta td.center-action {
+  text-align: center;
+  padding: 6px 0;
+}
+
+/* ========== GAME DETAIL PAGE ========== */
+.detail-back-link {
+  display: inline-block;
+  margin: 6px 0 10px 0;
+  color: black;
+  text-decoration: underline;
+}
+
+.stats-grid {
+  width: 96%;
+  margin: 0 auto;
+  border-collapse: collapse;
+}
+
+.stats-grid > tbody > tr {
+  vertical-align: top;
+}
+
+.stats-grid > tbody > tr > td {
+  width: 50%;
+  border: none;
+  background: transparent;
+  padding-right: 8px;
+}
+
+.stats-grid > tbody > tr > td:last-child {
+  padding-right: 0;
+  padding-left: 8px;
+}
+
+.stats-team-heading {
+  color: tan;
+  margin: 6px 0;
+}
+
+.stats-team-id {
+  font-size: 0.8em;
+  color: lightgray;
+}
+
+.no-stats {
+  color: lightgray;
+  font-style: italic;
+}
+
+.stats-inner-table {
+  border-collapse: collapse;
+  background: blue;
+  width: 100%;
+}
+
+.stats-inner-table th,
+.stats-inner-table td {
+  border: 3px solid darkorange;
+  background: lightgreen;
+  padding: 4px;
+}
+
+.stats-inner-table td.num {
+  text-align: center;
+}
+
+/* ========== UPDATE GAME PAGE ========== */
+.game-card-meta td.score-note {
+  color: lightgray;
+  font-size: 0.85em;
+}
+
+.player-stat-block {
+  display: inline-block;
+  vertical-align: top;
+  margin: 0 6px 10px 0;
+}
+
+.stat-edit-table {
+  border-collapse: collapse;
+  background: blue;
+}
+
+.stat-edit-table th,
+.stat-edit-table td {
+  border: 3px solid darkorange;
+  background: lightgreen;
+  padding: 3px;
+}
+
+.stat-edit-table th {
+  text-align: center;
+}
+
+.stat-team-heading {
+  color: tan;
+  margin: 14px 0 6px;
+}
+
+.no-stats-yet {
+  color: lightgray;
+  font-style: italic;
+}
+
+input.stat-input {
+  width: 60px;
+}
+
+.stat-game-select {
+  margin-bottom: 12px;
 }
 
 /* ========== MANAGEMENT PAGE SPECIFIC ========== */
@@ -203,7 +393,7 @@
   margin-right: 14px;
 }
 
-/* ========== TABLES ========== */
+/* ========== TABLES (global) ========== */
 table {
   border-collapse: collapse;
   width: 100%;
@@ -247,6 +437,15 @@ select {
   border: 1px solid black;
   background: lightgreen;
   color: black;
+  min-width: 160px;
+}
+
+/* ========== WHITE INPUTS (update_role.php) ========== */
+.input-white {
+  background: white;
+  color: black;
+  border: 1px solid black;
+  padding: 3px 6px;
   min-width: 160px;
 }
 
@@ -326,6 +525,28 @@ select {
 
 .btn-create:hover {
   background: darkorange;
+}
+
+/* ========== LOGIN / REGISTER / FORGOT PAGES ========== */
+h2.form-heading {
+  color: tan;
+}
+
+.login-table td {
+  font-size: 110%;
+}
+
+.error-box {
+  color: red;
+  background: #ffe0e0;
+  border: 1px solid red;
+  padding: 5px;
+  margin-bottom: 10px;
+}
+
+.error-box p {
+  margin: 2px 0;
+  color: red;
 }
 
 /* ========== UTILITY LINKS ========== */

@@ -29,7 +29,7 @@
   $me = $db->prepare("
     SELECT UI.First_name, UI.Last_name, T.Name
     FROM   Users_info AS UI
-    JOIN   Teams      AS T ON T.ID = UI.Team_num
+    LEFT JOIN Teams   AS T ON T.ID = UI.Team_num
     WHERE  UI.Email = ?
   ");
   if ($me)
@@ -58,80 +58,52 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <h1 style = "text-align:center;">Baseball League Statistics</h1>
+    <h1 class="page-title">Baseball League Statistics</h1>
     <?php Format("texta", 10, 8, 150, "black", 2, "black", "gray", 83, 89.6); ?>
 
-    <div id = "texta">
-      <h2 style = "text-align:center; color:tan; margin-top:4px;">All Games</h2>
+    <div id="texta">
+      <h2 class="section-title">All Games</h2>
 
-      <a href = "home_page.php">&larr; Return to Home</a>
+      <a href="home_page.php">&larr; Return to Home</a>
 
-      <div id = "game_window">
+      <div id="game_window">
         <?php if (empty($games)): ?>
-          <div class = "no-games">No games found.</div>
+          <div class="no-games">No games found.</div>
         <?php else: ?>
-          <?php foreach ($games as $g): ?>
 
-            <table class = "game-card">
-
-              <!-- Row 1: Home Team | V.S. | Away Team labels -->
-              <tr class = "row-header">
-                <td style = "width:40%;">Home Team</td>
-                <td class = "vs-cell">V.S.</td>
-                <td style = "width:40%;">Away Team</td>
+          <table class="games-table">
+            <thead>
+              <tr>
+                <th>Game ID</th>
+                <th>Home Team ID</th>
+                <th>Away Team ID</th>
+                <th>Date</th>
+                <th>Location</th>
+                <th>Home Score</th>
+                <th>Away Score</th>
+                <th>Action</th>
               </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($games as $g): ?>
+                <tr>
+                  <td class="col-id"><?= $g->game_id() ?></td>
+                  <td><?= $g->home_team_id() ?> &mdash; <?= htmlspecialchars($g->home_team()) ?></td>
+                  <td><?= $g->away_team_id() ?> &mdash; <?= htmlspecialchars($g->away_team()) ?></td>
+                  <td class="col-date"><?= htmlspecialchars($g->game_date() ?: 'TBD') ?></td>
+                  <td class="col-location"><?= htmlspecialchars($g->location() ?: 'TBD') ?></td>
+                  <td class="col-score"><?= $g->home_score() ?></td>
+                  <td class="col-score"><?= $g->away_score() ?></td>
+                  <td class="col-action">
+                    <?php if (($_SESSION['role'] ?? '') !== 'manager'): ?>
+                      <a class="btn" href="game_detail_page.php?id=<?= $g->game_id() ?>">View Detail</a>
+                    <?php endif; ?>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
 
-              <!-- Row 2: team names -->
-              <tr class = "row-teams">
-                <td style = "text-align:center;">
-                  <?= htmlspecialchars($g->home_team()) ?>
-                </td>
-                <td class = "vs-cell">&nbsp;</td>
-                <td style = "text-align:center;">
-                  <?= htmlspecialchars($g->away_team()) ?>
-                </td>
-              </tr>
-
-              <!-- Row 3: scores -->
-              <tr class = "row-scores">
-                <td style = "text-align:center;">
-                  <?= $g->home_score() ?>
-                </td>
-                <td class = "vs-cell">&mdash;</td>
-                <td style = "text-align:center;">
-                  <?= $g->away_score() ?>
-                </td>
-              </tr>
-
-              <!-- Row 4: date -->
-              <tr class = "row-meta">
-                <td colspan = "3">
-                  <strong>Date:</strong>
-                  <?= htmlspecialchars($g->game_date() ?: 'TBD') ?>
-                </td>
-              </tr>
-
-              <!-- Row 5: location -->
-              <tr class = "row-meta">
-                <td colspan = "3">
-                  <strong>Location:</strong>
-                  <?= htmlspecialchars($g->location() ?: 'TBD') ?>
-                </td>
-              </tr>
-
-              <!-- Row 6: Details button — visible to all roles -->
-              <tr class = "row-meta">
-                <td colspan = "3" style = "text-align:center; padding:6px 0;">
-                  <a class = "btn"
-                     href = "game_detail_page.php?id=<?= $g->game_id() ?>">
-                    View Details
-                  </a>
-                </td>
-              </tr>
-
-            </table>
-
-          <?php endforeach; ?>
         <?php endif; ?>
       </div>
     </div>

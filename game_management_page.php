@@ -35,7 +35,7 @@
   $me = $db->prepare("
     SELECT UI.First_name, UI.Last_name, T.Name
     FROM   Users_info AS UI
-    JOIN   Teams      AS T ON T.ID = UI.Team_num
+    LEFT JOIN Teams   AS T ON T.ID = UI.Team_num
     WHERE  UI.Email = ?
   ");
   if ($me)

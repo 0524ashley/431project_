@@ -4,16 +4,15 @@
 //
 //  Shows a confirmation screen, then deletes one player's stat
 //  row from Games_statistics for a specific game.
-//  After deletion, immediately recomputes and overwrites that
-//  player's Player_statistics totals via SUM() across their
-//  remaining Games_statistics rows.
-//  If the player has no game rows left, all totals become 0.
+//  After deletion, recomputes Player_statistics career totals
+//  and the game score automatically.
 //
 //  Access: manager (any player) OR user/coach (own team only).
 //
 //  Expects GET:
 //    game_id   — ID of the game
 //    player_id — ID of the player
+//    back      — 'update_game' | 'detail' | (default: player_stats)
 // =============================================================
 
   if (session_status() === PHP_SESSION_NONE)
@@ -41,6 +40,8 @@
 
   $game_id   = (int)($_REQUEST['game_id']   ?? 0);
   $player_id = (int)($_REQUEST['player_id'] ?? 0);
+  $back_raw  = $_REQUEST['back'] ?? '';
+  $back      = in_array($back_raw, ['update_game', 'detail']) ? $back_raw : 'player_stats';
 
   if ($game_id <= 0 || $player_id <= 0)
     {
@@ -58,7 +59,7 @@
   $error = '';
 
   // ------------------------------------------------------------------
-  // Fetch logged-in user's display info for the menu
+  // Menu display info
   // ------------------------------------------------------------------
   $menu_display_name = $_SESSION['username'] ?? 'User';
   $menu_team_name    = '';
@@ -95,59 +96,22 @@
     }
 
   // ------------------------------------------------------------------
-  // Handle confirmed deletion, then recompute Player_statistics
+  // Handle confirmed deletion then recompute
   // ------------------------------------------------------------------
   if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_delete']))
     {
     if (GameStatistic::delete($db, $game_id, $player_id))
       {
-      // --------------------------------------------------------------
-      // Recompute Player_statistics totals from whatever game rows
-      // remain for this player. COALESCE(SUM(...), 0) handles the case
-      // where no rows remain — all totals correctly become 0.
-      // Time is normalised: raw seconds → FLOOR/60 mins + MOD 60 secs.
-      // --------------------------------------------------------------
-      $sync = $db->prepare("
-        UPDATE Player_statistics
-        SET    Total_goals              = (
-                 SELECT COALESCE(SUM(Goals), 0)
-                 FROM   Games_statistics WHERE Player_ID = ?
-               ),
-               Total_assists            = (
-                 SELECT COALESCE(SUM(Assists), 0)
-                 FROM   Games_statistics WHERE Player_ID = ?
-               ),
-               Total_home_runs          = (
-                 SELECT COALESCE(SUM(Home_runs), 0)
-                 FROM   Games_statistics WHERE Player_ID = ?
-               ),
-               Total_time_on_field_mins = (
-                 SELECT FLOOR(
-                   COALESCE(SUM(Time_on_field_mins * 60 + Time_on_field_secs), 0) / 60
-                 )
-                 FROM   Games_statistics WHERE Player_ID = ?
-               ),
-               Total_time_on_field_secs = (
-                 SELECT MOD(
-                   COALESCE(SUM(Time_on_field_mins * 60 + Time_on_field_secs), 0), 60
-                 )
-                 FROM   Games_statistics WHERE Player_ID = ?
-               )
-        WHERE  Player_ID = ?
-      ");
-
-      if ($sync)
-        {
-        $sync->bind_param('iiiiii',
-          $player_id, $player_id, $player_id,
-          $player_id, $player_id, $player_id
-        );
-        $sync->execute();
-        $sync->close();
-        }
-
+      GameStatistic::recomputePlayerTotals($db, $player_id);
+      GameStatistic::recomputeGameScore($db, $game_id);
       $db->close();
-      header("Location: update_statistic.php?id={$player_id}&gs_deleted=1");
+
+      $redirect = match($back) {
+        'update_game' => "update_game.php?id={$game_id}&gs_deleted=1",
+        'detail'      => "game_detail_page.php?id={$game_id}&gs_deleted=1",
+        default       => "update_statistic.php?id={$player_id}&gs_deleted=1",
+      };
+      header("Location: " . $redirect);
       exit;
       }
     else
@@ -157,6 +121,12 @@
     }
 
   $db->close();
+
+  $back_href = match($back) {
+    'update_game' => "update_game.php?id={$game_id}",
+    'detail'      => "game_detail_page.php?id={$game_id}",
+    default       => "update_statistic.php?id={$player_id}",
+  };
 ?>
 <!DOCTYPE html>
 <html>
@@ -165,7 +135,7 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <h1 style = "text-align:center;">Baseball League Statistics</h1>
+    <h1 class = "page-title">Baseball League Statistics</h1>
     <?php Format("texta", 10, 8, 150, "black", 2, "black", "gray", 83, 89.6); ?>
 
     <div id = "texta">
@@ -187,23 +157,23 @@
           <strong>Player:</strong> <?= htmlspecialchars($player->fullName()) ?><br/>
           <strong>Team:</strong>   <?= htmlspecialchars($player->teamName()) ?><br/>
           <br/>
-          <strong>Goals:</strong>          <?= $stat->goals()         ?><br/>
-          <strong>Assists:</strong>        <?= $stat->assists()       ?><br/>
-          <strong>Home Runs:</strong>      <?= $stat->homeRuns()      ?><br/>
-          <strong>Time on Field:</strong>  <?= $stat->timeFormatted() ?><br/>
+          <strong>Goals:</strong>         <?= $stat->goals()         ?><br/>
+          <strong>Assists:</strong>       <?= $stat->assists()       ?><br/>
+          <strong>Home Runs:</strong>     <?= $stat->homeRuns()      ?><br/>
+          <strong>Time on Field:</strong> <?= $stat->timeFormatted() ?><br/>
         </div>
 
         <p class = "warning-text">
-          Deleting this entry will also update the player's career totals automatically.
+          Deleting this entry will also update the player's career totals and the game score automatically.
           This action cannot be undone.
         </p>
 
         <form method = "post"
-              action = "processStatisticDelete.php?game_id=<?= $game_id ?>&player_id=<?= $player_id ?>">
+              action = "processStatisticDelete.php?game_id=<?= $game_id ?>&player_id=<?= $player_id ?>&back=<?= $back ?>">
           <button type = "submit" name = "confirm_delete" class = "btn-confirm">
             Yes, Delete Game Stat
           </button>
-          <a class = "back-link" href = "update_statistic.php?id=<?= $player_id ?>">Cancel</a>
+          <a class = "back-link" href = "<?= htmlspecialchars($back_href) ?>">Cancel</a>
         </form>
       </div>
     </div>

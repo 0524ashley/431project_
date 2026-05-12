@@ -218,7 +218,6 @@
     // ---- Remove from Team (manager OR coach) -----------------------
     elseif (isset($_POST['confirm_remove']) && $remove_from_team)
       {
-      // Team_num = 1 is the "N/A" / unassigned team
       if (User::updateTeam($db, $player_id, 1))
         {
         $db->close();
@@ -250,80 +249,75 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <h1 style = "text-align:center;">Baseball League Statistics</h1>
+    <h1 class="page-title">Baseball League Statistics</h1>
     <?php Format("texta", 10, 8, 150, "black", 2, "black", "gray", 83, 89.6); ?>
 
-    <div id = "texta">
-      <div class = "form-wrap">
+    <div id="texta">
+      <div class="form-wrap">
         <h2><?= $page_title ?>: <?= htmlspecialchars($target->fullName()) ?></h2>
 
         <?php if ($success): ?>
-          <p class = "msg-ok"><?= $success ?></p>
+          <p class="msg-ok"><?= $success ?></p>
         <?php endif; ?>
         <?php if ($error): ?>
-          <p class = "msg-err"><?= htmlspecialchars($error) ?></p>
+          <p class="msg-err"><?= htmlspecialchars($error) ?></p>
         <?php endif; ?>
 
         <?php if (!$remove_from_team): ?>
-          <a class = "back-link" href = "<?= $back_url ?>">&larr; Back</a>
+          <a class="back-link" href="<?= $back_url ?>">&larr; Back</a>
         <?php endif; ?>
 
         <!-- ======================================================
              Mode: Change Info (manager OR coach)
-             Fields: First name, Last name, Password (all optional —
-             leave blank to keep current value)
              ====================================================== -->
         <?php if ($change_info): ?>
 
-          <p class = "current-val">
+          <p class="current-val">
             Current name: <strong><?= htmlspecialchars($target->fullName()) ?></strong>
             &bull; Team: <?= htmlspecialchars($target->teamName()) ?>
             &bull; Role: <?= htmlspecialchars(ucfirst($target->roleName())) ?>
           </p>
 
-          <form method = "post"
-                action = "update_role.php?id=<?= $player_id ?>&change_info=1">
-            <table style = "border-collapse:collapse; background:blue;">
+          <form method="post"
+                action="update_role.php?id=<?= $player_id ?>&change_info=1">
+            <table class="form-table">
               <tr>
-                <th style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Field</th>
-                <th style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">New Value</th>
+                <th>Field</th>
+                <th>New Value</th>
               </tr>
               <tr>
-                <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">First Name</td>
-                <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                  <input type = "text" name = "first_name"
-                         placeholder = "<?= htmlspecialchars($target->firstName()) ?>"
-                         value = ""/>
-                  <small style="color:gray;">Leave blank to keep current</small>
+                <td>First Name</td>
+                <td>
+                  <input type="text" name="first_name" class="input-white"
+                         placeholder="<?= htmlspecialchars($target->firstName()) ?>"
+                         value=""/>
                 </td>
               </tr>
               <tr>
-                <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Last Name</td>
-                <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                  <input type = "text" name = "last_name"
-                         placeholder = "<?= htmlspecialchars($target->lastName()) ?>"
-                         value = ""/>
-                  <small style="color:gray;">Leave blank to keep current</small>
+                <td>Last Name</td>
+                <td>
+                  <input type="text" name="last_name" class="input-white"
+                         placeholder="<?= htmlspecialchars($target->lastName()) ?>"
+                         value=""/>
                 </td>
               </tr>
               <tr>
-                <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">New Password</td>
-                <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                  <input type = "password" name = "new_password"
-                         placeholder = "Min 8 characters"/>
-                  <small style="color:gray;">Leave blank to keep current</small>
+                <td>New Password</td>
+                <td>
+                  <input type="password" name="new_password" class="input-white"
+                         placeholder="Min 8 characters"/>
                 </td>
               </tr>
               <tr>
-                <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Confirm Password</td>
-                <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                  <input type = "password" name = "confirm_password"
-                         placeholder = "Repeat new password"/>
+                <td>Confirm Password</td>
+                <td>
+                  <input type="password" name="confirm_password" class="input-white"
+                         placeholder="Repeat new password"/>
                 </td>
               </tr>
             </table>
             <br/>
-            <button type = "submit" name = "save_info" class = "btn-save">Save Info</button>
+            <button type="submit" name="save_info" class="btn-save">Save Info</button>
           </form>
 
         <!-- ======================================================
@@ -332,24 +326,24 @@
              ====================================================== -->
         <?php elseif ($remove_from_team): ?>
 
-          <div class = "user-detail">
+          <div class="user-detail">
             <strong>Player:</strong> <?= htmlspecialchars($target->fullName()) ?><br/>
             <strong>Current Team:</strong> <?= htmlspecialchars($target->teamName()) ?><br/>
             <strong>Username:</strong> @<?= htmlspecialchars($target->username()) ?>
           </div>
 
-          <p class = "warning-text">
+          <p class="warning-text">
             This will move <?= htmlspecialchars($target->firstName()) ?> to the
             unassigned pool (Team N/A). Their account and all statistics are kept.
             A manager can reassign them to a team later.
           </p>
 
-          <form method = "post"
-                action = "update_role.php?id=<?= $player_id ?>&remove_from_team=1">
-            <button type = "submit" name = "confirm_remove" class = "btn-confirm">
+          <form method="post"
+                action="update_role.php?id=<?= $player_id ?>&remove_from_team=1">
+            <button type="submit" name="confirm_remove" class="btn-confirm">
               Yes, Remove from Team
             </button>
-            <a class = "back-link" href = "<?= $back_url ?>">Cancel</a>
+            <a class="back-link" href="<?= $back_url ?>">Cancel</a>
           </form>
 
         <!-- ======================================================
@@ -357,24 +351,24 @@
              ====================================================== -->
         <?php elseif ($change_team && $is_manager): ?>
 
-          <p class = "current-val">
+          <p class="current-val">
             Current team: <strong><?= htmlspecialchars($target->teamName()) ?></strong>
             &bull; Role: <?= htmlspecialchars(ucfirst($target->roleName())) ?>
           </p>
 
-          <form method = "post"
-                action = "update_role.php?id=<?= $player_id ?>&change_team=1">
-            <table style = "border-collapse:collapse; background:blue;">
+          <form method="post"
+                action="update_role.php?id=<?= $player_id ?>&change_team=1">
+            <table class="form-table">
               <tr>
-                <th style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">New Team</th>
-                <th style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Select</th>
+                <th>New Team</th>
+                <th>Select</th>
               </tr>
               <tr>
-                <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Team:</td>
-                <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                  <select name = "team_id">
+                <td>Team:</td>
+                <td>
+                  <select name="team_id" class="input-white">
                     <?php foreach ($teams as $t): ?>
-                      <option value = "<?= (int)$t['ID'] ?>"
+                      <option value="<?= (int)$t['ID'] ?>"
                         <?= ((int)$t['ID'] === $target->teamId()) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($t['Name']) ?>
                       </option>
@@ -384,7 +378,7 @@
               </tr>
             </table>
             <br/>
-            <button type = "submit" name = "save_team" class = "btn-save">Save Team</button>
+            <button type="submit" name="save_team" class="btn-save">Save Team</button>
           </form>
 
         <!-- ======================================================
@@ -392,24 +386,24 @@
              ====================================================== -->
         <?php elseif ($is_manager): ?>
 
-          <p class = "current-val">
+          <p class="current-val">
             Current role: <strong><?= htmlspecialchars(ucfirst($target->roleName())) ?></strong>
             &bull; Team: <?= htmlspecialchars($target->teamName()) ?>
           </p>
 
-          <form method = "post" action = "update_role.php?id=<?= $player_id ?>">
-            <table style = "border-collapse:collapse; background:blue;">
+          <form method="post" action="update_role.php?id=<?= $player_id ?>">
+            <table class="form-table">
               <tr>
-                <th style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">New Role</th>
-                <th style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Select</th>
+                <th>New Role</th>
+                <th>Select</th>
               </tr>
               <tr>
-                <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">Role:</td>
-                <td style = "vertical-align:top; border:4px solid darkorange; background:lightgreen;">
-                  <select name = "role_type">
+                <td>Role:</td>
+                <td>
+                  <select name="role_type" class="input-white">
                     <?php foreach ($roles as $r): ?>
                       <?php if ((int)$r['ID'] === 3) continue; ?>
-                      <option value = "<?= (int)$r['ID'] ?>"
+                      <option value="<?= (int)$r['ID'] ?>"
                         <?= ((int)$r['ID'] === $target->roleType()) ? 'selected' : '' ?>>
                         <?= htmlspecialchars(ucfirst($r['Role_name'])) ?>
                       </option>
@@ -419,12 +413,10 @@
               </tr>
             </table>
             <br/>
-            <button type = "submit" name = "save_role" class = "btn-save">Save Role</button>
+            <button type="submit" name="save_role" class="btn-save">Save Role</button>
           </form>
 
         <?php endif; ?>
-
-        
 
       </div>
     </div>
