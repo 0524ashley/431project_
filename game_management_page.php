@@ -57,11 +57,10 @@
   $games = Game::getAll($db);
   $db->close();
 
-  // Flash message after delete/create
-  $flash = $_GET['deleted'] ?? '';
-  $flash = $flash ? "Game deleted successfully." : '';
-  if (!$flash && isset($_GET['created']))
-    $flash = "Game created successfully.";
+  // Flash messages after delete / create
+  $flash = '';
+  if (isset($_GET['deleted'])) $flash = "Game deleted successfully.";
+  if (isset($_GET['created'])) $flash = "Game created successfully.";
 ?>
 <!DOCTYPE html>
 <html>
@@ -76,7 +75,6 @@
     <div id = "texta">
       <h2 style = "text-align:center; color:tan; margin-top:4px;">Game Management</h2>
 
-      <!-- top bar: Return to Management (left) | Create New Game (right) -->
       <div class = "top-links">
         <a href = "role_management_page.php">&larr; Return to Management</a>
         <a href = "home_page.php">&larr; Return to Home</a>
@@ -112,7 +110,7 @@
               <td><?= htmlspecialchars($g->location()) ?></td>
               <td>
                 <a class = "btn"
-                   href = "update_game.php?id=<?= $g->game_id() ?>">Modify</a>
+                   href = "update_game.php?id=<?= $g->game_id() ?>">Manage Stats</a>
                 <a class = "btn-delete"
                    href = "delete_game.php?id=<?= $g->game_id() ?>"
                    onclick = "return confirm('Delete this game? This cannot be undone.');">Delete</a>

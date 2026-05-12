@@ -119,6 +119,16 @@
                 </td>
               </tr>
 
+              <!-- Row 6: Details button — visible to all roles -->
+              <tr class = "row-meta">
+                <td colspan = "3" style = "text-align:center; padding:6px 0;">
+                  <a class = "btn"
+                     href = "game_detail_page.php?id=<?= $g->game_id() ?>">
+                    View Details
+                  </a>
+                </td>
+              </tr>
+
             </table>
 
           <?php endforeach; ?>
